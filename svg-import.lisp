@@ -1,4 +1,7 @@
-;;;;; svg-import.lisp
+;;; (ql:quickload "svg-export")
+;;; (ql:quickload "cxml-stp")
+;;; (ql:quickload "cl-ppcre")
+;;;;; svg import:
 
 (in-package :svg-export)
 
@@ -95,6 +98,7 @@ transformations are executed from left to right."
                    (read-op transformation)
                  (apply (symbol-function fn) args))))))
 
+
 #|
 (get-transformation-mtx
  "translate(196.02814,156.95225) matrix(0.9330498,0,0,2.8503305,0.24844852,-155.11236)") (0.9330498 0.0 0.0 2.8503306 183.15245 292.25345)
@@ -190,7 +194,8 @@ transformations are executed from left to right."
 
 (defun circle? (node)
   (and (typep node 'cxml-stp:element)
-       (string= (cxml-stp:local-name node) "circle")))
+       (or (string= (cxml-stp:local-name node) "circle")
+           (string= (cxml-stp:local-name node) "ellipse"))))
 
 (defun path? (node)
   (and (typep node 'cxml-stp:element)
@@ -373,7 +378,21 @@ transformations are executed from left to right."
         (mtx-mult
          curr-transformation
          (get-transformation-mtx
-          (cxml-stp:value new-transform))))))
+          (cxml-stp:value new-transform)))
+        curr-transformation)))
+
+(defun get-fill-opacity (node)
+  (read-from-string
+   (aref
+    (second (multiple-value-list
+             (cl-ppcre:scan-to-strings
+              "fill-opacity:([0-9.]+)"
+              (cxml-stp:value (cxml-stp:find-attribute-named node "style")))))
+    0)))
+
+
+(defun get-id (node)
+  (cxml-stp:value (cxml-stp:find-attribute-named node "id")))
 
 (defun collect-points (layer transformation &key (xquantize t) (yquantize t))
   (let ((result '()))
@@ -386,8 +405,11 @@ transformations are executed from left to right."
             (let ((res (collect-points child inner-transformation :xquantize xquantize
                                        :yquantize yquantize)))
               (if res (push res result)))))
-         ((circle? child) (push (get-coords child transformation :xquantize xquantize
-                                                      :yquantize yquantize) result))))
+         ((circle? child) (push (append
+                                 (get-coords child transformation :xquantize xquantize
+                                             :yquantize yquantize)
+                                 (list (get-fill-opacity child)
+                                       (get-id child))) result))))
      layer)
     (reverse result)))
 
