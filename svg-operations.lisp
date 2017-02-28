@@ -5,6 +5,14 @@
 
 (defparameter *basedir* nil)
 (defparameter *tuning-base* 443)
+
+(defun chan->color (chan)
+  (aref #("#000000" "#000000" "#000000" "#000000"
+          "#000000" "#000000" "#000000" "#000000"
+          "#000000" "#000000" "#000000" "#000000"
+          "#000000" "#000000" "#000000" "#000000")
+        chan))
+
 (defun grafikpath (fname)
   (pathname (format nil "~a/grafik/~a" *basedir* fname)))
 
@@ -511,6 +519,9 @@ t 0 ~a
    outfile
    :play nil))
 
+
+;; a line is a list of '(time keynum duration)
+
 (defun lines->midi (lines &key (outfile "/tmp/test.midi") (timescale 1))
   (cm:events
    (mapcar (lambda (line) (cm:new cm:midi :time (* 1/4 timescale (first line)) :keynum (second line) :duration (* 1/4 timescale (third line))))
@@ -610,27 +621,31 @@ t 0 ~a
             (dur (* timescale (sv midi 'cm::duration))))
         (list (if quantize (round time) time)
               (sv midi 'cm::keynum)
-              (if quantize (round dur) dur))))
+              (if quantize (round dur) dur)
+              (chan->color (sv midi 'cm::channel))
+              (sv midi 'cm::amplitude))))
     (cm:subobjects track :class 'cm:midi))
    #'(lambda (x y) (< (first x) (first y)))))
 
-(defun midi->points (&key (infile "/home/orm/work/kompositionen/ast/midi/test-sine.midi")
+;;; (format nil "~a" (pathname "/home/orm/work/kompositionen/ast/midi/test-sine.midi"))
+
+(defun midi->points (&key (infile (pathname "/home/orm/work/kompositionen/ast/midi/test-sine.midi"))
                        (timescale 1) (x-offs 0) (quantize nil))
-  (let ((seq (cm:import-events infile)))
+  (let ((seq (cm:import-events (format nil "~a" infile))))
 ;;    (break "seq: ~a" seq)
     (if (consp seq)
         (remove nil (mapcar (lambda (track) (digest-track track :timescale timescale :x-offs x-offs :quantize quantize)) seq))
         (digest-track seq :timescale timescale :quantize quantize))))
 
-(defun midi->lines (&key (infile "/home/orm/work/kompositionen/ast/midi/test-sine.midi")
+(defun midi->lines (&key (infile (pathname "/home/orm/work/kompositionen/ast/midi/test-sine.midi"))
                       (timescale 1) (x-offs 0) (quantize nil))
-  (let ((seq (cm:import-events infile)))
+  (let ((seq (cm:import-events  (format nil "~a" infile))))
     ;;    (break "seq: ~a" seq)
     (if (consp seq)
         (remove nil (mapcar (lambda (track) (digest-track-lines track :timescale timescale :x-offs x-offs :quantize quantize)) seq))
         (digest-track-lines seq :timescale timescale :quantize quantize))))
 
-(defun midi->svg (&key (infile "/home/orm/work/kompositionen/ast/midi/test-sine.midi")
+(defun midi->svg (&key (infile (pathname "/home/orm/work/kompositionen/ast/midi/test-sine.midi"))
                     (outfile #P"/tmp/test.svg")
                     (timescale 1)
                     (quantize nil))
@@ -659,33 +674,34 @@ supposed to be a midifloat value, x ist translated into secs/beats."
            (lambda (x y) (< (first x) (first y))))))
 
 
-(defun svg->lines (&key (infile #P"/tmp/test.svg") (timescale 1) (xquantize t) (yquantize t))
+(defun svg->lines (&key (infile #P"/tmp/test.svg") (timescale 1) (xquantize t) (yquantize t) (x-offset 0))
   "extract all circle objects (points) in the layer \"Punkte\" of svg infile.
 Also removes duplicates and flattens subgroups. Points are simple
 two-element lists containing x and y coordinates. The y coordinate is
 supposed to be a midifloat value, x ist translated into secs/beats."
-  (mapcar (lambda (x) (setf (first x) (* (first x) timescale)) x)
+  (mapcar (lambda (x) (setf (first x) (+ x-offset (* (first x) timescale))) x)
           (sort
            (remove-duplicates
            (ou:flatten-fn (get-lines-from-file :fname infile :xquantize xquantize :yquantize yquantize) :fn #'caar)
             :test #'equal)
            (lambda (x y) (< (first x) (first y))))))
 
-(defun xscale-points (points xscale)
+(defun xscale-points (points xscale &key (xoffs 0))
   (cond ((null points) '())
         ((consp (caar points))
-         (cons (xscale-points (car points) xscale)
-               (xscale-points (cdr points) xscale)))
-        (t (mapcar (lambda (p) (cons (* xscale (first p)) (rest p)))
+         (cons (xscale-points (car points) xscale :xoffs xoffs)
+               (xscale-points (cdr points) xscale :xoffs xoffs)))
+        (t (mapcar (lambda (p) (cons (+ xoffs (* xscale (first p))) (rest p)))
                    points))))
 
-(defun xscale-lines (lines xscale)
+(defun xscale-lines (lines xscale  &key (xoffs 0))
   (cond ((null lines) '())
         ((consp (caar lines))
-         (cons (xscale-lines (car lines) xscale)
-               (xscale-lines (cdr lines) xscale)))
-        (t (mapcar (lambda (p) (append (list (* xscale (first p)) (second p)
-                                             (* xscale (third p))) (nthcdr 3 p)))
+         (cons (xscale-lines (car lines) xscale :xoffs xoffs)
+               (xscale-lines (cdr lines) xscale :xoffs xoffs)))
+        (t (mapcar (lambda (p) (append (list (+ xoffs (* xscale (first p))) (second p)
+                                        (+ xoffs (* xscale (third p))))
+                                  (nthcdr 3 p)))
                    lines))))
 
 ;;; (xscale-lines '(((0 3 2) (2 4 1)) (2 -1 4) (3 5 3)) 0.5)
@@ -693,7 +709,8 @@ supposed to be a midifloat value, x ist translated into secs/beats."
 (defun points->svg (points &key (outfile #P"/tmp/test.svg")
                              (timescale 1)
                              (color "#000000")
-                             (radius 0.5))
+                             (radius 0.5)
+                             (xoffs 0))
   (let ((svg-file (make-instance 'svg-file)))
     (setf (slot-value svg-file 'elements) 
           (list

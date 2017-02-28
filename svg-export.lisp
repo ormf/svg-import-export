@@ -8,6 +8,10 @@
 
 (defparameter *inverse* nil)
 
+
+""
+
+
 (defparameter *svg-header* "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 <svg
@@ -31,6 +35,34 @@
 
   <defs
      id=\"defs2394\">
+    <marker
+       inkscape:stockid=\"DotS\"
+       orient=\"auto\"
+       refY=\"0.0\"
+       refX=\"0.0\"
+       id=\"DotS\"
+       style=\"overflow:visible\"
+       inkscape:isstock=\"true\">
+      <path
+         id=\"path6619\"
+         d=\"M -2.5,-1.0 C -2.5,1.7600000 -4.7400000,4.0 -7.5,4.0 C -10.260000,4.0 -12.5,1.7600000 -12.5,-1.0 C -12.5,-3.7600000 -10.260000,-6.0 -7.5,-6.0 C -4.7400000,-6.0 -2.5,-3.7600000 -2.5,-1.0 z \"
+         style=\"fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1;fill:#000000;fill-opacity:1\"
+         transform=\"scale(0.2) translate(7.4, 1)\" />
+    </marker>
+    <marker
+       inkscape:stockid=\"Arrow1Mend\"
+       orient=\"auto\"
+       refY=\"0.0\"
+       refX=\"0.0\"
+       id=\"Arrow1Mend\"
+       style=\"overflow:visible;\"
+       inkscape:isstock=\"true\">
+      <path
+         id=\"path4186\"
+         d=\"M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z \"
+         style=\"fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1;fill:#000000;fill-opacity:1\"
+         transform=\"scale(0.4) rotate(180) translate(10,0)\" />
+    </marker>
     <marker
        inkscape:stockid=\"Arrow1Lend\"
        orient=\"auto\"
@@ -77,7 +109,8 @@
        units=\"mm\"
        spacingy=\"1.0000023\"
        spacingx=\"0.99994901\"
-       dotted=\"false\" />
+       dotted=\"false\" 
+       empspacing=\"4\" />
   </sodipodi:namedview>
   <metadata
      id=\"metadata2397\">
@@ -91,6 +124,7 @@
     </rdf:RDF>
   </metadata>
 ")
+
 
 (def-exporting-class svg-file ()
    ((header :accessor header :initarg :header :initform *svg-header* :export t)
@@ -196,6 +230,22 @@
    (font-family :accessor font-family :initarg :font-family :initform "Bitstream Vera Sans" :export t)
   ))
 
+
+(def-exporting-class svg-path ()
+  ((id :accessor id :initarg :id :initform 0 :export t)
+   (d :accessor d :initarg :d :initform 0 :export t)
+   (fill-color :accessor fill-color :initarg :fill-color :initform "none" :export t)
+   (fill-rule :accessor fill-rule :initarg :fill-rule :initform "evenodd" :export t)
+   (fill-opacity :accessor fill-opacity :initarg :fill-opacity :initform 1 :export t)
+   (stroke-color :accessor stroke-color :initarg :stroke-color :initform +black+ :export t)
+   (stroke-width :accessor stroke-width :initarg :stroke-width :initform 1 :export t)
+   (stroke-linecap :accessor stroke-linecap :initarg :stroke-linecap :initform "butt" :export t)
+   (stroke-linejoin :accessor stroke-linejoin :initarg :stroke-linejoin :initform "miter" :export t)
+   (marker-end :accessor marker-end :initarg :marker-end :initform nil :export t)
+   (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)))
+
+
+
 (def-exporting-class svg-clone ()
   ((id :accessor id :initarg :id :initform 0 :export t)
    (href :accessor href :initarg :href :initform "" :export t)
@@ -225,10 +275,11 @@
          xml:space=\"preserve\"><tspan
            y=\"~a\"
            x=\"~a\"
+           font-size=\"~apx\"
            id=\"tspan~a\"
            sodipodi:role=\"line\">~a</tspan>
       </text>"
-            id y x font-size font-style font-weight (get-color fill-color) fill-opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity font-family y x id label)))
+            id y x font-size font-style font-weight (get-color fill-color) fill-opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity font-family y x font-size id label)))
 
 ;; (print-to-stream (make-instance 'svg-text :label "Testtext" :x 100 :y 117) t)
 
@@ -250,15 +301,15 @@
 (defmethod print-to-stream ((obj svg-line) stream)
   (with-slots
         (fill-color fill-opacity fill-rule stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity
-                    x1 y1 x2 y2 id) obj
-    (if (marker-end obj)
+                    x1 y1 x2 y2 id marker-end) obj
+    (if marker-end
         (format stream
                 "    <path
-       style=\"fill:~a;fill-opacity:~a;fill-rule:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;marker-end:url(#Arrow1Lend)\"
+       style=\"fill:~a;fill-opacity:~a;fill-rule:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;marker-end:~a\"
        d=\"M ~a,~a L ~a,~a\"
        id=\"path~a\" />
 "
-                (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity
+                (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity marker-end
                 x1 y1 x2 y2 id )
         (format stream
                 "    <path
@@ -269,7 +320,24 @@
                 (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity
                 x1 y1 x2 y2 id ))))
 
-;; (print-to-stream (make-instance 'svg-line :x1 :y1 :x2 :y2 :marker-end t) nil)
+;; (print-to-stream (make-instance 'svg-line :x1 :y1 :x2 :y2 :marker-end "url(#Arrow1Lend)") nil)
+
+(defmethod print-to-stream ((obj svg-path) stream)
+  (with-slots
+        (fill-color fill-opacity fill-rule stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity
+                    d id marker-end) obj
+    (format stream
+            "   <path
+       style=\"fill:~a;fill-opacity:~a;fill-rule:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a\"
+       d=\"~a\"
+       id=\"path~a\"
+       inkscape:connector-curvature=\"0\" />"
+            (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity
+            d id)))
+
+
+
+
 
 (defmethod print-to-stream ((obj svg-point) stream)
   (with-slots
