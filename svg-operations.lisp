@@ -234,7 +234,7 @@ t 0 ~a
                                 :rx radius :ry radius
                                 :stroke-width 0
                                 ;;                                      :stroke-color (color-lookup color) 
-                                :fill-opacity opacity
+                                :opacity opacity
                                 :fill-color color
                                 :id (new-id svg-file 'point-ids)))
                (if (nth 2 point)
@@ -265,7 +265,7 @@ t 0 ~a
                                 
                                    :x2 (+ x1 width) :y2 (* -1 y1)
                                    :stroke-width stroke-width
-                                   :stroke-opacity opacity
+                                   :opacity opacity
                                    :stroke-color color 
 ;;                                   :fill-color color
                                    :id (new-id svg-file 'line-ids)
@@ -679,19 +679,18 @@ supposed to be a midifloat value, x ist translated into secs/beats."
 Also removes duplicates and flattens subgroups. Points are simple
 two-element lists containing x and y coordinates. The y coordinate is
 supposed to be a midifloat value, x ist translated into secs/beats."
-  (mapcar (lambda (x) (setf (first x) (+ x-offset (* (first x) timescale))) x)
-          (sort
-           (remove-duplicates
-           (ou:flatten-fn (get-lines-from-file :fname infile :xquantize xquantize :yquantize yquantize) :fn #'caar)
-            :test #'equal)
-           (lambda (x y) (< (first x) (first y))))))
+  (sort
+   (remove-duplicates
+    (ou:flatten-fn (get-lines-from-file :fname infile :timescale timescale :x-offset x-offset :xquantize xquantize :yquantize yquantize) :fn #'caar)
+    :test #'equal)
+   (lambda (x y) (< (first x) (first y)))))
 
 (defun xscale-points (points xscale &key (xoffs 0))
   (cond ((null points) '())
         ((consp (caar points))
          (cons (xscale-points (car points) xscale :xoffs xoffs)
                (xscale-points (cdr points) xscale :xoffs xoffs)))
-        (t (mapcar (lambda (p) (cons (+ xoffs (* xscale (first p))) (rest p)))
+        (t (mapcar (lambda (p) (cons (* xscale (+ xoffs (first p))) (rest p)))
                    points))))
 
 (defun xscale-lines (lines xscale  &key (xoffs 0))
@@ -699,8 +698,8 @@ supposed to be a midifloat value, x ist translated into secs/beats."
         ((consp (caar lines))
          (cons (xscale-lines (car lines) xscale :xoffs xoffs)
                (xscale-lines (cdr lines) xscale :xoffs xoffs)))
-        (t (mapcar (lambda (p) (append (list (+ xoffs (* xscale (first p))) (second p)
-                                        (+ xoffs (* xscale (third p))))
+        (t (mapcar (lambda (p) (append (list (* xscale (+ xoffs (first p))) (second p)
+                                        (* xscale (+ xoffs (third p))))
                                   (nthcdr 3 p)))
                    lines))))
 

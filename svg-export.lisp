@@ -179,7 +179,8 @@
    (stroke-linejoin :accessor stroke-linejoin :initarg :stroke-linejoin :initform "miter" :export t)
    (stroke-miterlimit :accessor stroke-miterlimit :initarg :stroke-miterlimit :initform 4 :export t)
    (stroke-dasharray :accessor stroke-dasharray :initarg :stroke-dasharray :initform "none" :export t)
-   (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)))
+   (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)
+   (opacity :accessor opacity :initarg :opacity :initform 1 :export t)))
 
 (def-exporting-class svg-line ()
   ((id :accessor id :initarg :id :initform 0 :export t)
@@ -195,7 +196,8 @@
    (stroke-linecap :accessor stroke-linecap :initarg :stroke-linecap :initform "butt" :export t)
    (stroke-linejoin :accessor stroke-linejoin :initarg :stroke-linejoin :initform "miter" :export t)
    (marker-end :accessor marker-end :initarg :marker-end :initform nil :export t)
-   (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)))
+   (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)
+   (opacity :accessor opacity :initarg :opacity :initform 1 :export t)))
 
 (def-exporting-class svg-rect ()
   ((id :accessor id :initarg :id :initform 0 :export t)
@@ -210,7 +212,8 @@
    (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)
    (fill-color :accessor fill-color :initarg :fill-color :initform "none" :export t)
    (fill-rule :accessor fill-rule :initarg :fill-rule :initform "evenodd" :export t)
-   (fill-opacity :accessor fill-opacity :initarg :fill-opacity :initform 1 :export t)))
+   (fill-opacity :accessor fill-opacity :initarg :fill-opacity :initform 1 :export t)
+   (opacity :accessor opacity :initarg :opacity :initform 1 :export t)))
 
 (def-exporting-class svg-text ()
   ((id :accessor id :initarg :id :initform 0 :export t)
@@ -227,6 +230,7 @@
    (stroke-linecap :accessor stroke-linecap :initarg :stroke-linecap :initform "butt" :export t)
    (stroke-linejoin :accessor stroke-linejoin :initarg :stroke-linejoin :initform "miter" :export t)
    (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)
+   (opacity :accessor opacity :initarg :opacity :initform 1 :export t)
    (font-family :accessor font-family :initarg :font-family :initform "Bitstream Vera Sans" :export t)
   ))
 
@@ -242,7 +246,8 @@
    (stroke-linecap :accessor stroke-linecap :initarg :stroke-linecap :initform "butt" :export t)
    (stroke-linejoin :accessor stroke-linejoin :initarg :stroke-linejoin :initform "miter" :export t)
    (marker-end :accessor marker-end :initarg :marker-end :initform nil :export t)
-   (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)))
+   (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)
+   (opacity :accessor opacity :initarg :opacity :initform 1 :export t)))
 
 
 
@@ -265,13 +270,13 @@
 (defgeneric print-to-stream (obj stream))
 
 (defmethod print-to-stream ((obj svg-text) stream)
-  (with-slots (id y x font-size font-style font-weight fill-color fill-opacity stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity font-family label) obj
+  (with-slots (id y x font-size font-style font-weight fill-color fill-opacity stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity opacity font-family label) obj
     (format stream
             "<text
          id=\"text~a\"
          y=\"~a\"
          x=\"~a\"
-         style=\"font-size:~apx;font-style:~a;font-weight:~a;fill:~a;fill-opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;font-family:~a\"
+         style=\"font-size:~apx;font-style:~a;font-weight:~a;opacity:~a;fill:~a;fill-opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;font-family:~a\"
          xml:space=\"preserve\"><tspan
            y=\"~a\"
            x=\"~a\"
@@ -279,13 +284,13 @@
            id=\"tspan~a\"
            sodipodi:role=\"line\">~a</tspan>
       </text>"
-            id y x font-size font-style font-weight (get-color fill-color) fill-opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity font-family y x font-size id label)))
+            id y x font-size font-style font-weight opacity (get-color fill-color) fill-opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity font-family y x font-size id label)))
 
 ;; (print-to-stream (make-instance 'svg-text :label "Testtext" :x 100 :y 117) t)
 
 
 (defmethod print-to-stream ((obj svg-rect) stream)
-    (with-slots (y x height width id fill-color fill-rule stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity fill-opacity) obj
+    (with-slots (y x height width id fill-color fill-rule stroke-color stroke-width stroke-linecap stroke-linejoin opacity stroke-opacity fill-opacity) obj
       (format stream
               "<rect
          y=\"~a\"
@@ -294,55 +299,54 @@
          width=\"~a\"
          id=\"rect~a\"
          style=\"fill:~a;fill-rule:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;opacity:~a\" />"
-              y x height width id (get-color fill-color) fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity fill-opacity)))
+              y x height width id (get-color fill-color) fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity opacity)))
 
 ;; (print-to-stream (make-instance 'svg-rect :width 117 :height 139 :x 100 :y 117) nil)
 
 (defmethod print-to-stream ((obj svg-line) stream)
   (with-slots
-        (fill-color fill-opacity fill-rule stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity
-                    x1 y1 x2 y2 id marker-end) obj
+        (fill-color fill-opacity fill-rule opacity stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity
+                    x1 y1 x2 y2 id marker-end)
+      obj
     (if marker-end
         (format stream
                 "    <path
-       style=\"fill:~a;fill-opacity:~a;fill-rule:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;marker-end:~a\"
+       style=\"fill:~a;fill-opacity:~a;fill-rule:~a;opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;marker-end:~a\"
        d=\"M ~a,~a L ~a,~a\"
        id=\"path~a\" />
 "
-                (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity marker-end
+                (get-color fill-color) fill-opacity fill-rule opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity marker-end
                 x1 y1 x2 y2 id )
         (format stream
                 "    <path
-       style=\"fill:~a;fill-opacity:~a;fill-rule:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a\"
+       style=\"fill:~a;fill-opacity:~a;fill-rule:~a;opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a\"
        d=\"M ~a,~a L ~a,~a\"
        id=\"path~a\" />
 "
-                (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity
+                (get-color fill-color) fill-opacity fill-rule opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity
                 x1 y1 x2 y2 id ))))
 
 ;; (print-to-stream (make-instance 'svg-line :x1 :y1 :x2 :y2 :marker-end "url(#Arrow1Lend)") nil)
 
 (defmethod print-to-stream ((obj svg-path) stream)
   (with-slots
-        (fill-color fill-opacity fill-rule stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity
-                    d id marker-end) obj
+        (fill-color fill-opacity fill-rule opacity stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity
+                    d id marker-end)
+      obj
     (format stream
             "   <path
-       style=\"fill:~a;fill-opacity:~a;fill-rule:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a\"
+       style=\"fill:~a;fill-opacity:~a;fill-rule:~a;opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a\"
        d=\"~a\"
        id=\"path~a\"
        inkscape:connector-curvature=\"0\" />"
-            (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity
+            (get-color fill-color) fill-opacity fill-rule opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity
             d id)))
-
-
-
-
 
 (defmethod print-to-stream ((obj svg-point) stream)
   (with-slots
         (fill-color fill-opacity fill-rule stroke-color stroke-width stroke-linecap stroke-linejoin stroke-miterlimit stroke-dasharray
-                    stroke-opacity id cx cy rx) obj
+                    opacity id cx cy rx)
+      obj
     (format stream
             "    <circle
        r=\"~a\"
@@ -353,7 +357,7 @@
        />
 "
              rx cy cx (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-miterlimit stroke-dasharray
-            stroke-opacity id)))
+            opacity id)))
 
 (defmethod print-to-stream ((obj svg-clone) stream)
   (with-slots (href id transform) obj
