@@ -100,7 +100,8 @@ t 0 ~a
 (defparameter *white-keys*
   (append
    (loop for startpitch from 12 to 108 by 12
-      append (ou:integrate (cons startpitch '(2 2 1 2 2 2)))) '(120)))
+      append (ou:integrate (cons startpitch '(2 2 1 2 2 2))))
+   '(120)))
 
 (defparameter *black-keys*
   (loop for startpitch from 13 to 109 by 12
@@ -121,17 +122,18 @@ t 0 ~a
     105 108
     ))
 
-(defun make-piano-roll (svg-file)
-  (append (list (make-instance 'svg-layer :name "PianoRoll" :id (new-id svg-file 'layer-ids)
-                               :insensitive t))
+(defun make-piano-roll (svg-file &key (visible t) (width 10000))
+  (append (list (make-instance 'svg-tl-layer :name "PianoRoll" :id (new-id svg-file 'layer-ids)
+                               :insensitive t
+                               :visible visible))
           (list (cons (make-instance 'svg-group
                                      :id (new-id svg-file 'group-ids))
                       (append
                        (loop for pitch in *white-keys*
                           collect (make-instance 'svg-rect 
                                                  :x 0
-                                                 :y (* -1 (+ pitch 0.5))
-                                                 :width 10000
+                                                 :y (- pitch 0.5)
+                                                 :width width
                                                  :height 1
                                                  :stroke-color "#aaaaaa"
                                                  :stroke-width 0.1
@@ -139,8 +141,8 @@ t 0 ~a
                        (loop for pitch in *black-keys*
                           collect (make-instance 'svg-rect 
                                                  :x 0
-                                                 :y (* -1 (+ pitch 0.5))
-                                                 :width 10000
+                                                 :y (- pitch 0.5)
+                                                 :width width
                                                  :height 1
                                                  :stroke-width 0.1
                                                  :stroke-color "#aaaaaa"
@@ -149,47 +151,52 @@ t 0 ~a
 
 ;; (make-piano-roll (make-instance 'svg-file))
 
-(defun make-staff-system (svg-file)
-  (append (list (make-instance 'svg-layer :name "Stafflines" :id (new-id svg-file 'layer-ids) :insensitive t))
+(defparameter *my-file* (make-instance 'svg-file))
+(make-piano-roll *my-file*)
+
+(defun make-staff-system (svg-file &key (visible t) (width 10000))
+  (append (list (make-instance 'svg-tl-layer :name "Stafflines" :id (new-id svg-file 'layer-ids)
+                               :insensitive t
+                               :visible visible))
           (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
                       (append
                        (loop for pitch in *staff-lines*
                           collect (make-instance 'svg-line
                                                  :x1 0
-                                                 :y1 (* -1 pitch)
-                                                 :x2 10000
-                                                 :y2 (* -1 pitch)
+                                                 :y1 pitch
+                                                 :x2 width
+                                                 :y2 pitch
                                                  :stroke-color "#000000"
                                                  :stroke-width 0.2
                                                  :id (new-id svg-file 'line-ids)))
                        (loop for pitch in *ledger-lines*
                           collect (make-instance 'svg-line
                                                  :x1 0
-                                                 :y1 (* -1 pitch)
-                                                 :x2 10000
-                                                 :y2 (* -1 pitch)
+                                                 :y1 pitch
+                                                 :x2 width
+                                                 :y2 pitch
                                                  :stroke-color "#eeeeee"
                                                  :stroke-width 0.4
                                                  :id (new-id svg-file 'line-ids))))))))
 
-(defun make-zeitachse (svg-file &key (mins t) (halfmins t) (tensecs t) (fivesecs t) (secs t) (xscale 1))
+(defun make-zeitachse (svg-file &key (end-time 900) (mins t) (halfmins t) (tensecs t) (fivesecs t) (secs t) (xscale 1))
   (append (list (make-instance 'svg-layer :name "Zeitachse" :id (new-id svg-file 'layer-ids) :insensitive t))
                          (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
-                                     (loop for time from 0 to 900 by 30
+                                     (loop for time from 0 to end-time by 30
                                         append
                                           (cond
                                            ((and (zerop (mod time 60)) mins)
                                              (list
                                               (make-instance 'svg-text 
                                                              :x (* xscale time)
-                                                             :y (* -1 xscale 20)
+                                                             :y (* xscale 20)
                                                              :label (format nil "~d.00" (floor time 60))
                                                              :id (new-id svg-file 'text-ids))))
                                             ((and (zerop (mod time 30)) halfmins)
                                              (list
                                               (make-instance 'svg-text 
                                                              :x (* xscale time)
-                                                             :y (* -1 xscale 20)
+                                                             :y (* xscale 20)
                                                              :label (format nil "~d.30" (floor time 60))
                                                              :id (new-id svg-file 'text-ids))))
                                             (t nil)))))
@@ -200,27 +207,27 @@ t 0 ~a
                                             ((and (zerop (mod time 60)) mins)
                                              (list
                                               (make-instance 'svg-line :x1 (* xscale time) :x2 (* xscale time) 
-                                                             :y1 (* -1 xscale 10) :y2 (* -1 xscale 20) 
+                                                             :y1 (* xscale 10) :y2 (* -1 xscale 20) 
                                                              :id (new-id svg-file 'line-ids))))
                                             ((and (zerop (mod time 30)) halfmins)
                                              (list
                                               (make-instance 'svg-line :x1 (* xscale time) :x2 (* xscale time) 
-                                                             :y1 (* -1 xscale 10) :y2 (* -1 xscale 17.5) 
+                                                             :y1 (* xscale 10) :y2 (* -1 xscale 17.5) 
                                                              :id (new-id svg-file 'line-ids))))
                                             ((and (zerop (mod time 10)) tensecs)
                                              (list
                                               (make-instance 'svg-line :x1 (* xscale time) :x2 (* xscale time) 
-                                                             :y1 (* -1 xscale 10) :y2 (* -1 xscale 15) 
+                                                             :y1 (* xscale 10) :y2 (* -1 xscale 15) 
                                                              :id (new-id svg-file 'line-ids))))
                                             ((and (zerop (mod time 5)) fivesecs)
                                              (list
                                               (make-instance 'svg-line :x1 (* xscale time) :x2 (* xscale time) 
-                                                             :y1 (* -1 xscale 10) :y2 (* -1 xscale 12.5) 
+                                                             :y1 (* xscale 10) :y2 (* -1 xscale 12.5) 
                                                              :id (new-id svg-file 'line-ids))))
                                             ((and (zerop (mod time 1)) secs)
                                              (list
                                               (make-instance 'svg-line :x1 (* xscale time) :x2 (* xscale time) 
-                                                             :y1 (* -1 xscale 10) :y2 (* -1 xscale 11) 
+                                                             :y1 (* xscale 10) :y2 (* -1 xscale 11) 
                                                              :id (new-id svg-file 'line-ids))))
                                             (t nil)))))))
 
@@ -230,7 +237,7 @@ t 0 ~a
        (if (numberp (car point))
            (if (nth 3 point)
                (destructuring-bind (cx cy color opacity) point
-                 (make-instance 'svg-point :cx cx :cy (+ (* -1 cy)) 
+                 (make-instance 'svg-point :cx cx :cy cy 
                                 :rx radius :ry radius
                                 :stroke-width 0
                                 ;;                                      :stroke-color (color-lookup color) 
@@ -239,14 +246,14 @@ t 0 ~a
                                 :id (new-id svg-file 'point-ids)))
                (if (nth 2 point)
                    (destructuring-bind (cx cy color) point
-                     (make-instance 'svg-point :cx cx :cy (+ (* -1 cy)) 
+                     (make-instance 'svg-point :cx cx :cy cy 
                                     :rx radius :ry radius
                                     :stroke-width 0
                                     ;;                                      :stroke-color (color-lookup color) 
                                     :fill-color color
                                     :id (new-id svg-file 'point-ids)))
                    (destructuring-bind (cx cy) point
-                     (make-instance 'svg-point :cx cx :cy (+ (* -1 cy)) 
+                     (make-instance 'svg-point :cx cx :cy cy 
                                     :rx radius :ry radius
                                     :stroke-width 0
                                     ;;                                      :stroke-color (color-lookup color) 
@@ -261,9 +268,9 @@ t 0 ~a
        (if (numberp (car line))
            (cond ((nth 4 line)
                   (destructuring-bind (x1 y1 width color opacity) line
-                    (make-instance 'svg-line :x1 x1 :y1 (* -1 y1)
+                    (make-instance 'svg-line :x1 x1 :y1 y1
                                 
-                                   :x2 (+ x1 width) :y2 (* -1 y1)
+                                   :x2 (+ x1 width) :y2 y1
                                    :stroke-width stroke-width
                                    :opacity opacity
                                    :stroke-color color 
@@ -272,18 +279,18 @@ t 0 ~a
                                    )))
                  ((nth 3 line)
                   (destructuring-bind (x1 y1 width color) line
-                    (make-instance 'svg-line :x1 x1 :y1 (* -1 y1)
+                    (make-instance 'svg-line :x1 x1 :y1 y1
                                 
-                                   :x2 (+ x1 width) :y2 (* -1 y1)
+                                   :x2 (+ x1 width) :y2 y1
                                    :stroke-width stroke-width
                                    :stroke-color color
 ;;                                   :fill-color color
                                    :id (new-id svg-file 'line-ids))))
                  (t
                   (destructuring-bind (x1 y1 width) line
-                    (make-instance 'svg-line :x1 x1 :y1 (+ (* -1 y1))
+                    (make-instance 'svg-line :x1 x1 :y1 y1
                                 
-                                   :x2 (+ x1 width) :y2 (* -1 y1)
+                                   :x2 (+ x1 width) :y2 y1
                                    :stroke-width stroke-width
                                    :stroke-color color
 ;;                                   :fill-color color
@@ -293,7 +300,7 @@ t 0 ~a
 
 (defun regenerate-points (svg-file &key (fname #P"/tmp/test.svg") (xquantize t) (yquantize t))
   (append 
-   (list (make-instance 'svg-layer :name "Punkte" :id (new-id svg-file 'layer-ids)))
+   (list (make-instance 'svg-tl-layer :name "Punkte" :id (new-id svg-file 'layer-ids)))
    (list->svg-points (get-points-from-file :fname fname :xquantize xquantize :yquantize yquantize) svg-file)))
 
 (defun renew-svg-file (&key (infile #P"/tmp/test.svg")
@@ -638,9 +645,10 @@ t 0 ~a
         (digest-track seq :timescale timescale :quantize quantize))))
 
 (defun midi->lines (&key (infile (pathname "/home/orm/work/kompositionen/ast/midi/test-sine.midi"))
-                      (timescale 1) (x-offs 0) (quantize nil))
+                      (timescale 1) (x-offs 0) (quantize nil) (debug nil))
   (let ((seq (cm:import-events  (format nil "~a" infile))))
-    ;;    (break "seq: ~a" seq)
+    (if debug
+        (break "seq: ~a" seq))
     (if (consp seq)
         (remove nil (mapcar (lambda (track) (digest-track-lines track :timescale timescale :x-offs x-offs :quantize quantize)) seq))
         (digest-track-lines seq :timescale timescale :quantize quantize))))
@@ -655,7 +663,7 @@ t 0 ~a
            (make-piano-roll svg-file)
            (make-staff-system svg-file)
            (append 
-            (list (make-instance 'svg-layer :name "Punkte" :id (new-id svg-file 'layer-ids)))
+            (list (make-instance 'svg-tl-layer :name "Punkte" :id (new-id svg-file 'layer-ids)))
             (list->svg-points (midi->points :infile infile :timescale timescale :quantize quantize) svg-file))))
     (export-svg-file svg-file :fname outfile)))
 
@@ -674,14 +682,14 @@ supposed to be a midifloat value, x ist translated into secs/beats."
            (lambda (x y) (< (first x) (first y))))))
 
 
-(defun svg->lines (&key (infile #P"/tmp/test.svg") (timescale 1) (xquantize t) (yquantize t) (x-offset 0))
+(defun svg->lines (&key (infile #P"/tmp/test.svg") (timescale 1) (xquantize t) (yquantize t) (x-offset 0) (layer "Punkte"))
   "extract all circle objects (points) in the layer \"Punkte\" of svg infile.
 Also removes duplicates and flattens subgroups. Points are simple
 two-element lists containing x and y coordinates. The y coordinate is
 supposed to be a midifloat value, x ist translated into secs/beats."
   (sort
    (remove-duplicates
-    (ou:flatten-fn (get-lines-from-file :fname infile :timescale timescale :x-offset x-offset :xquantize xquantize :yquantize yquantize) :fn #'caar)
+    (ou:flatten-fn (get-lines-from-file :fname infile :timescale timescale :x-offset x-offset :xquantize xquantize :yquantize yquantize :layer layer) :fn #'caar)
     :test #'equal)
    (lambda (x y) (< (first x) (first y)))))
 
@@ -716,7 +724,7 @@ supposed to be a midifloat value, x ist translated into secs/beats."
            (make-piano-roll svg-file)
            (make-staff-system svg-file)
            (append 
-            (list (make-instance 'svg-layer :name "Punkte" :id (new-id svg-file 'layer-ids)))
+            (list (make-instance 'svg-tl-layer :name "Punkte" :id (new-id svg-file 'layer-ids)))
             (list->svg-points (xscale-points points timescale) svg-file
                               :radius radius
                               :color color))
@@ -733,7 +741,7 @@ supposed to be a midifloat value, x ist translated into secs/beats."
            (make-piano-roll svg-file)
            (make-staff-system svg-file)
            (append 
-            (list (make-instance 'svg-layer :name "Punkte" :id (new-id svg-file 'layer-ids)))
+            (list (make-instance 'svg-tl-layer :name "Punkte" :id (new-id svg-file 'layer-ids)))
             (list->svg-lines (xscale-lines lines timescale) svg-file
                               :stroke-width stroke-width
                               :color color))))
@@ -2864,3 +2872,56 @@ König und Meyer 26740
                finally (return (if curr-chd
                                    (append result (list (sort curr-chd #'<)))
                                    result))))))
+
+
+(defun join (seq &key (key #'first))
+  "join elements of seq into sublists with elements equal with respect
+to the key."
+  (let ((s (sort seq  #'< :key key)))
+    (loop
+       with chd = ()
+       with res = ()
+       for point in s
+       with curr = (funcall key (first s))
+       do (let ((tmp (funcall key point)))
+            (if (= tmp curr)
+                (push point chd)
+                (progn
+                  (push (reverse chd) res)
+                  (setf chd (list point))
+                  (setf curr tmp))))
+       finally (return (reverse (push chd res))))))
+
+(defun keynum-list->bc-list (seq)
+  (loop
+     for last = (caar seq) then (car chd)
+     for chd in seq
+     collect (cons (- (car chd) last) (rest (ou:differentiate chd)))))
+
+(defun plist->bc-list (seq)
+  (loop
+     for last = (caar seq) then (car chd)
+     for chd in seq
+     collect (cons (- (car chd) last) (rest (ou:differentiate chd)))))
+
+(defun svg->bc-list (infile)
+  (plist->bc-list
+   (loop
+      for x in (join (svg-export:svg->points :infile infile))
+      collect (sort (mapcar #'second x) #'<))))
+
+;;; (svg->bc-list #P"/tmp/test.svg")
+
+(defun bc-list->keynum-list (seq &key (offset 60) (iv-scale 1))
+  "transform a bc-list (basso continuo style list) into a keynum list."
+  (loop
+     for chd in seq
+     with curr = offset
+     collect (ou:integrate (cons (incf curr (first chd)) (rest (mapcar (lambda (x) (* x iv-scale)) chd))))))
+
+(defun bc-list->svg (seq &key (outfile #P"/tmp/test.svg") (p-offs 60) (iv-scale 1) (dx 2))
+  (points->svg (loop
+                  for x from 0 by dx
+                  for chd in (bc-list->keynum-list seq :offset p-offs :iv-scale iv-scale)
+                  append (loop for keynum in chd collect `(,x ,keynum))) :outfile outfile))
+

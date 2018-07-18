@@ -31,7 +31,7 @@
     ))
 
 (defun make-piano-roll (svg-file)
-  (append (list (make-instance 'svg-layer :name "PianoRoll" :id (new-id svg-file 'layer-ids)
+  (append (list (make-instance 'svg-tl-layer :name "PianoRoll" :id (new-id svg-file 'layer-ids)
                                :insensitive t))
           (list (cons (make-instance 'svg-group
                                      :id (new-id svg-file 'group-ids))
@@ -39,7 +39,7 @@
                        (loop for pitch in *white-keys*
                           collect (make-instance 'svg-rect 
                                                  :x 0
-                                                 :y (* -1 (+ pitch 0.5))
+                                                 :y (- pitch 0.5)
                                                  :width 10000
                                                  :height 1
                                                  :stroke-color "#aaaaaa"
@@ -48,7 +48,7 @@
                        (loop for pitch in *black-keys*
                           collect (make-instance 'svg-rect 
                                                  :x 0
-                                                 :y (* -1 (+ pitch 0.5))
+                                                 :y (- pitch 0.5)
                                                  :width 10000
                                                  :height 1
                                                  :stroke-width 0.1
@@ -58,24 +58,24 @@
 
 
 (defun make-staff-system (svg-file)
-  (append (list (make-instance 'svg-layer :name "Stafflines" :id (new-id svg-file 'layer-ids) :insensitive t))
+  (append (list (make-instance 'svg-tl-layer :name "Stafflines" :id (new-id svg-file 'layer-ids) :insensitive t))
           (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
                       (append
                        (loop for pitch in *staff-lines*
                           collect (make-instance 'svg-line
                                                  :x1 0
-                                                 :y1 (* -1 pitch)
+                                                 :y1 pitch
                                                  :x2 10000
-                                                 :y2 (* -1 pitch)
+                                                 :y2 pitch
                                                  :stroke-color "#000000"
                                                  :stroke-width 0.2
                                                  :id (new-id svg-file 'line-ids)))
                        (loop for pitch in *ledger-lines*
                           collect (make-instance 'svg-line
                                                  :x1 0
-                                                 :y1 (* -1 pitch)
+                                                 :y1 pitch
                                                  :x2 10000
-                                                 :y2 (* -1 pitch)
+                                                 :y2 pitch
                                                  :stroke-color "#eeeeee"
                                                  :stroke-width 0.4
                                                  :id (new-id svg-file 'line-ids))))))))

@@ -1,0 +1,76 @@
+#+TITLE: svg-export
+
+A library for exporting to svg file format.
+
+This library contains lisp classes for an incomplete set of svg
+elements and defines a function svg-export to export them into a svg
+file. The used header writes the file in inkscape file format to
+enable the use of layers.
+
+* Intro
+
+Code example taken from the file [[file:svg-export-examples.lisp][svg-export-examples.lisp]]:
+
+Make sure you have [[https://www.quicklisp.org/beta/][Quicklisp]] installed and working with your Lisp implementation, then load svg-export:
+
+#+BEGIN_SRC lisp
+  (ql:quickload :svg-export)
+  (in-package :svg-export)
+#+END_SRC
+
+In the example we first create an svg-file instance and then fill the
+'elements slot with objects. SVG group elements like layers and groups
+are represented as (possibly nested) lists with a group or layer
+object as first element and the contents of the group or layer as
+objects (or lists) in the rest of the list:
+
+#+BEGIN_SRC lisp
+  (in-package :svg-export)
+  (defparameter *test* nil)
+
+  (progn
+    (setf *test*
+          (let ((end-time 100)
+                (xscale 10)
+                (gxoffs 20)
+                (svg-file (make-instance 'svg-file)))
+            (setf (slot-value svg-file 'elements) 
+                  (list
+                   (append (list 
+                            (make-instance 'svg-layer 
+                                           :name "Ebene 1" 
+                                           :id (new-id svg-file 'layer-ids)))
+                           (loop for x from 0 to end-time by 12
+                              collect (make-instance 'svg-rect
+                                                     :x (+ gxoffs (* xscale x)) 
+                                                     :y 200
+                                                     :width (* xscale 10)
+                                                     :height 100
+                                                     :fill-color "#333333"
+                                                     :id (new-id svg-file 'rect-ids))))))
+            (push (svg-zeitachse end-time svg-file
+                                 :gxoffs gxoffs :gyoffs 100 :xscale xscale) 
+                  (elements svg-file))
+            svg-file))
+    (export-svg-file *test*))
+#+END_SRC
+
+If you use emacs with slime installed, you can inspect the elements
+slot of the svg-file object by pressing <C-c I> at the and of the
+following expression:
+
+#+BEGIN_SRC lisp
+  (elements *test*)
+#+END_SRC
+
+Objects are exported with the print-to-stream method:
+
+#+BEGIN_SRC lisp
+(print-to-stream (make-instance 'svg-text) t)
+#+END_SRC
+
+#+BEGIN_SRC lisp
+(push (svg-zeitachse 2000 *test*) (elements *test*))
+#+END_SRC
+
+The file

@@ -1,5 +1,4 @@
 ;;; (ql:quickload "svg-export")
-;;; (ql:quickload "orm-utils")
 
 (in-package :svg-export)
 (defparameter *test* nil)

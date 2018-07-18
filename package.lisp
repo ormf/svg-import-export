@@ -28,8 +28,12 @@
    #:LINES->SVG
    #:SVG->POINTS
    #:SVG->LINES
+   #:SVG->BC-LIST
+   #:BC-LIST->KEYNUM-LIST
+   #:BC-LIST->SVG
    #:SVG->PD-TEXT
    #:MIDI->POINTS
    #:MIDI->LINES
    #:MIDI->SVG
+   #:TRANSLATE
    ))
