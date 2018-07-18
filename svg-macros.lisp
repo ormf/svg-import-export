@@ -1,4 +1,15 @@
-(in-package :svg-export)
+;;; svg-macros.lisp
+;;;
+;;; **********************************************************************
+;;; Copyright (C) 2012-2018 Orm Finnendahl
+;;;
+;;; This program is free software; you can redistribute it and/or
+;;; modify it under the terms of the Lisp Lesser Gnu Public License.
+;;; See http://www.cliki.net/LLGPL for the text of this agreement.
+;;; **********************************************************************
+
+
+(in-package :svg-import-export)
 
 (eval-when (:compile-toplevel :load-toplevel)
   (defvar +black+ "#000000")

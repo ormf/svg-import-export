@@ -1,9 +1,19 @@
-;;; (ql:quickload "svg-export")
-;;; (ql:quickload "cxml-stp")
-;;; (ql:quickload "cl-ppcre")
-;;;;; svg import:
+;;; svg-import.lisp
+;;;
+;;; functions for importing point or line elements from an svg
+;;; file. Transformations are tracked through the svg tree and applied
+;;; accordingly to obtain the correct absolute coordinates of the
+;;; elements.
+;;;
+;;; **********************************************************************
+;;; Copyright (C) 2012-2018 Orm Finnendahl
+;;;
+;;; This program is free software; you can redistribute it and/or
+;;; modify it under the terms of the Lisp Lesser Gnu Public License.
+;;; See http://www.cliki.net/LLGPL for the text of this agreement.
+;;; **********************************************************************
 
-(in-package :svg-export)
+(in-package :svg-import-export)
 
 ;;; Matrix transformations:
 
@@ -183,8 +193,10 @@ transformations are executed from left to right."
            (if (cxml-stp:find-attribute-named node "groupmode" URI)
                (equal (cxml-stp:value (cxml-stp:find-attribute-named node "groupmode" URI)) "layer"))
            (cxml-stp:find-attribute-named node "style"))
-      (not (equal (cxml-stp:value (cxml-stp:find-attribute-named node "style")) "display:none"))
+      (not (cl-ppcre:scan "display:none" (cxml-stp:value (cxml-stp:find-attribute-named node "style"))))
       t))
+
+
 
 #|
 (defun point? (node &key (URI "http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"))
@@ -202,7 +214,7 @@ transformations are executed from left to right."
        (string= (cxml-stp:local-name node) "path")))
 
 #|
-;;; ohne Quantisierung
+;;; without quantisation
 
 (defun get-coords (node transformation)
   (destructuring-bind (x y)
@@ -242,8 +254,8 @@ transformations are executed from left to right."
          (* (round (* 2 x)) 0.5)
          x)
      (if yquantize
-         (* (round (* 2 y)) -0.5)
-         (* -1 y)))))
+         (* (round (* 2 y)) 0.5)
+         y))))
 
 (defun style-stroke-width (style-string)
   (multiple-value-bind (_1 _2 rstart rend) (cl-ppcre:scan "stroke-width:\([0-9\.]\+\)px" style-string)
@@ -254,7 +266,7 @@ transformations are executed from left to right."
 ;;; (style-stroke-width "fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1")
 
 (defun style-stroke-color (style-string)
-  (multiple-value-bind (_1 _2 rstart rend) (cl-ppcre:scan "stroke:\(#[0-9]\+\)" style-string)
+  (multiple-value-bind (_1 _2 rstart rend) (cl-ppcre:scan "stroke:\(#[0-9abcdefABCDEF]\+\)" style-string)
     (declare (ignore _1 _2))
     (if rstart
         (subseq style-string (aref rstart 0) (aref rend 0)))))
@@ -262,9 +274,16 @@ transformations are executed from left to right."
 ;;; (style-stroke-color "fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1")
 
 (defun style-stroke-opacity (style-string)
-  (multiple-value-bind (_1 _2 rstart rend) (cl-ppcre:scan "stroke-opacity:\([0-9\.]\+\)" style-string)
+  (multiple-value-bind (_1 _2 rstart rend) (cl-ppcre:scan "(?:^|;)stroke-opacity:\([0-9\.]\+\)" style-string)
     (declare (ignore _1 _2))
-    (read-from-string (subseq style-string (aref rstart 0) (aref rend 0)))))
+    (if rstart (read-from-string (subseq style-string (aref rstart 0) (aref rend 0)))
+        (break "style-stroke-opacity not readable: ~s" style-string))))
+
+(defun style-opacity (style-string)
+  (multiple-value-bind (_1 _2 rstart rend) (cl-ppcre:scan "(?:^|;)opacity:\([0-9\.]\+\)" style-string)
+    (declare (ignore _1 _2))
+    (if rstart (read-from-string (subseq style-string (aref rstart 0) (aref rend 0)))
+        (style-stroke-opacity style-string))))
 
 ;;; (style-stroke-opacity "fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:0.35")
 
@@ -283,6 +302,9 @@ transformations are executed from left to right."
           (list (list x y) (list x2 (+ y dy)))))))
 
 (defun make-string-parser (str)
+  "return a closure, which returns all space-delimited substrings of
+str in order, one on each call of the closure. Returns nil if string
+is exhausted."
   (let ((i 0) (j 0))
     (lambda ()
       (if j
@@ -306,6 +328,9 @@ transformations are executed from left to right."
 (defun lineto-abs (curr-coords mv-coords)
   (declare (ignore curr-coords))
   mv-coords)
+
+(defun hlineto-abs (curr-coords mv-coords)
+  (list (first mv-coords) (second curr-coords)))
 
 (defun move-rel (curr-coords mv-coords)
   (mapcar #'+ curr-coords mv-coords))
@@ -332,6 +357,10 @@ transformations are executed from left to right."
                    (progn
                      (setf cmd 'lineto-rel)
                      (list 'lineto-rel (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
+                  ((string= s "h")
+                   (progn
+                     (setf cmd 'lineto-rel)
+                     (list 'lineto-rel (read-from-string (funcall fn)) 0)))
                   ((string= s "M")
                    (progn
                      (setf cmd 'lineto-abs)
@@ -340,15 +369,24 @@ transformations are executed from left to right."
                    (progn
                      (setf cmd 'lineto-abs)
                      (list 'lineto-abs  (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
+                  ((string= s "H")
+                   (progn
+                     (setf cmd 'hlineto-abs)
+                     (list 'hlineto-abs (read-from-string (funcall fn)) (first curr-coords))))
                   (t (list cmd (read-from-string s) (read-from-string (funcall fn)))))))))
 
 #|
+
+(parse-path2 "m 791.74452,-73.99904 16,0")
+(parse-path2 "m 791.74452,-73.99904 h 16")
+(parse-path2 "m 791.74452,-73.99904 H 800")
 (subseq "1 2 3" 3 nil)
 
 (parse-path2 "M 10,40 5,8")
 |#
 
-(defun get-path-coords (node transformation &key (xquantize t) (yquantize t))
+(defun get-path-coords (node transformation &key (x-offset 0) (timescale 1) (xquantize t) (yquantize t))
+  "return (list x y length color opacity) from path."
   (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
          (style-string (cxml-stp:value (cxml-stp:find-attribute-named node "style")))
          (p1 (funcall #'vec-mtx-mult
@@ -361,16 +399,16 @@ transformations are executed from left to right."
       (declare (ignore y2))
       (list
        (if xquantize
-           (* (round (* 2 x1)) 0.5)
-           x1)
+           (* (round (* 2 timescale (+ x-offset x1))) 0.5)
+           (+ x-offset x1))
        (if yquantize
-           (* (round (* 2 y1)) -0.5)
-           (* -1 y1))
+           (round (* 1 y1))
+           (* 1 y1))
        (if xquantize
-           (* (round (* 2 (- x2 x1))) 0.5)
+           (round (* timescale (- x2 x1)))
            (- x2 x1))
        (style-stroke-color style-string)
-       (style-stroke-opacity style-string)))))
+       (style-opacity style-string)))))
 
 (defun update-transformation (curr-transformation node)
   (let ((new-transform (cxml-stp:find-attribute-named node "transform")))
@@ -409,22 +447,31 @@ transformations are executed from left to right."
                                  (get-coords child transformation :xquantize xquantize
                                              :yquantize yquantize)
                                  (list (get-fill-opacity child)
-                                       (get-id child))) result))))
+                                       (get-id child)))
+                                result))))
      layer)
     (reverse result)))
 
-(defun collect-lines (layer transformation &key (xquantize t) (yquantize t))
+(defun collect-lines (layer transformation &key (timescale 1) (x-offset 0) (xquantize t) (yquantize t))
   (let ((result '()))
     (cxml-stp:map-children
      'list
      (lambda (child)
        (cond
-         ((group? child) (let ((inner-transformation (update-transformation transformation child)))
-                           (let ((res (collect-lines child inner-transformation :xquantize xquantize
-                                                      :yquantize yquantize)))
-                             (if res (push res result)))))
-         ((path? child) (push (get-path-coords child transformation :xquantize xquantize
-                                                      :yquantize yquantize) result))))
+         ((and (group? child) (visible? child))
+          (let ((inner-transformation (update-transformation transformation child)))
+            (let ((res (collect-lines child inner-transformation
+                                      :x-offset x-offset
+                                      :timescale timescale
+                                      :xquantize xquantize
+                                      :yquantize yquantize)))
+              (if res (push res result)))))
+         ((path? child) (push (get-path-coords child transformation
+                                               :xquantize xquantize
+                                               :yquantize yquantize
+                                               :x-offset x-offset
+                                               :timescale timescale)
+                              result))))
      layer)
     (reverse result)))
 
@@ -439,26 +486,27 @@ transformations are executed from left to right."
 
 ;; (make-pathname :directory '(:absolute "tmp") :name "test.svg")
 
-(defun get-points-from-file (&key (fname #P"/tmp/test.svg") (xquantize t) (yquantize t))
+(defun get-points-from-file (&key (fname #P"/tmp/test.svg") (xquantize t) (yquantize t) (layer-name "Punkte"))
   "extract all circle objects (points) in the layer \"Punkte\" of svg infile."
   (collect-points
    (get-layer
-    "Punkte"
+    layer-name
     (cxml:parse
      fname
      (stp:make-builder)))
    nil :xquantize xquantize :yquantize yquantize))
 
 
-(defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (xquantize t) (yquantize t))
+(defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize t) (yquantize t) (layer-name "Punkte"))
   "extract all line objects) in the layer \"Punkte\" of svg infile."
   (collect-lines
    (get-layer
-    "Punkte"
+    layer-name
     (cxml:parse
      fname
      (stp:make-builder)))
-   nil :xquantize xquantize :yquantize yquantize))
+   nil :xquantize xquantize :yquantize yquantize
+   :x-offset x-offset :timescale timescale))
 
 #|
 

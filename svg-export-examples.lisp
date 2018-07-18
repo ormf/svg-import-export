@@ -1,7 +1,20 @@
-;;; (ql:quickload "svg-export")
+;;; svg-export-examples.lisp
+;;;
+;;; **********************************************************************
+;;; Copyright (C) 2012-2018 Orm Finnendahl
+;;;
+;;; This program is free software; you can redistribute it and/or
+;;; modify it under the terms of the Lisp Lesser Gnu Public License.
+;;; See http://www.cliki.net/LLGPL for the text of this agreement.
+;;; **********************************************************************
 
-(in-package :svg-export)
+(in-package :svg-export-import)
+
+
 (defparameter *test* nil)
+
+;;; example code to create an svg file with 8 squares and a time axis
+;;; above. The file is stored in "/tmp/test.svg".
 
 (progn
   (setf *test*
@@ -24,13 +37,23 @@
                                                    :fill-color "#333333"
                                                    :id (new-id svg-file 'rect-ids))))))
           (push (svg-zeitachse end-time svg-file
-                               :gxoffs gxoffs :gyoffs 100 :xscale xscale) (elements svg-file))
+                               :gxoffs gxoffs :gyoffs 100 :xscale xscale)
+                (elements svg-file))
           svg-file))
   (export-svg-file *test*))
 
+;;; example for printing a svg Textobject as svg XML to a stream:
+
 (print-to-stream (make-instance 'svg-text) t)
+
+;;; The elements of the svg file from above:
 
 (elements *test*)
 
+;;; push a piano-roll layer to *test*
 
-(push (svg-zeitachse 2000 *test*) (elements *test*))
+(push (svg-piano-roll *test*) (elements *test*))
+
+;;; export *test*
+
+(export-svg-file *test*)

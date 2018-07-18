@@ -1,10 +1,18 @@
-;;; (ql:quickload "quickproject")
-;;; (quickproject:make-project "/home/orm/work/programmieren/lisp/blahblah/" :depends-on '("svg-export"))
-;;; danach den code in docbooktotex.lisp schreiben, emacs neu starten und:
-;;; (ql:quickload "blahblah")
+;;; plotting-example.lisp
+;;;
+;;; simple plotting example (export and reimport):
+;;;
+;;; **********************************************************************
+;;; Copyright (C) 2012-2018 Orm Finnendahl
+;;;
+;;; This program is free software; you can redistribute it and/or
+;;; modify it under the terms of the Lisp Lesser Gnu Public License.
+;;; See http://www.cliki.net/LLGPL for the text of this agreement.
+;;; **********************************************************************
 
-(in-package #:svg-export)
+(in-package #:svg-import-export)
 
+;;; export a list of x/y coordinates to an svg file:
 
 (points->svg
  '((0.0 93.0) (12.0 94.0) (17.0 90.0) (24.0 95.0) (28.0 91.0) (34.0 85.0)
@@ -84,6 +92,10 @@
    (457.5 69.0) (457.5 67.0) (460.5 58.0) (460.5 56.0) (464.5 63.0) (465.5 52.0)
    (468.5 59.0) (468.5 57.0) (471.5 70.0) (471.5 68.0) (477.5 53.0) (482.5 60.0)
    (482.5 58.0) (489.5 54.0) (491.5 61.0) (491.5 59.0) (498.5 55.0) (505.5 62.0)
-   (505.5 60.0)))
+   (505.5 60.0))
+ :fname "/tmp/test.svg")
 
-(svg->points :infile #P "/tmp/test.svg")
+
+;;; reimport from svg file:
+
+(svg->points :infile #P"/tmp/test.svg")
