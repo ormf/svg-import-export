@@ -462,26 +462,28 @@ is exhausted."
 
 (defun collect-lines (layer transformation &key (timescale 1) (x-offset 0) (xquantize t) (yquantize t))
   (let ((result '()))
-    (cxml-stp:map-children
-     'list
-     (lambda (child)
-       (cond
-         ((and (group? child) (visible? child))
-          (let ((inner-transformation (update-transformation transformation child)))
-            (let ((res (collect-lines child inner-transformation
-                                      :x-offset x-offset
-                                      :timescale timescale
-                                      :xquantize xquantize
-                                      :yquantize yquantize)))
-              (if res (push res result)))))
-         ((path? child) (push (get-path-coords child transformation
-                                               :xquantize xquantize
-                                               :yquantize yquantize
-                                               :x-offset x-offset
-                                               :timescale timescale)
-                              result))))
-     layer)
-    (reverse result)))
+    (if (and layer (visible? layer))
+        (progn
+          (cxml-stp:map-children
+           'list
+           (lambda (child)
+             (cond
+               ((and (group? child) (visible? child))
+                (let ((inner-transformation (update-transformation transformation child)))
+                  (let ((res (collect-lines child inner-transformation
+                                            :x-offset x-offset
+                                            :timescale timescale
+                                            :xquantize xquantize
+                                            :yquantize yquantize)))
+                    (if res (push res result)))))
+               ((path? child) (push (get-path-coords child transformation
+                                                     :xquantize xquantize
+                                                     :yquantize yquantize
+                                                     :x-offset x-offset
+                                                     :timescale timescale)
+                                    result))))
+           layer)
+          (reverse result)))))
 
 ;;; (collect-points (get-layer "Punkte" *xml*))
 

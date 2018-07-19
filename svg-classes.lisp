@@ -100,16 +100,24 @@
      inkscape:window-height=\"1041\"
      inkscape:window-x=\"1366\"
      inkscape:window-y=\"0\"
-     showgrid=\"false\"
+     showgrid=\"~a\"
      gridtolerance=\"10000\"
      inkscape:window-maximized=\"1\">
     <inkscape:grid
        type=\"xygrid\"
-       id=\"grid3796\"
+       id=\"default-grid-4x4\"
        spacingy=\"1\"
        spacingx=\"1\"
        dotted=\"false\" 
        empspacing=\"4\" />
+    <inkscape:grid
+       type=\"xygrid\"
+       id=\"grid-5x5\"
+       spacingy=\"1\"
+       spacingx=\"1\"
+       dotted=\"false\" 
+       empspacing=\"5\"
+       enabled=\"false\" />
   </sodipodi:namedview>
   <metadata
      id=\"metadata2397\">
@@ -123,11 +131,13 @@
     </rdf:RDF>
   </metadata>
 ")
+
 (def-exporting-class svg-file ()
    ((header :accessor header :initarg :header :initform *svg-header* :export t)
     (width  :accessor width :initarg :width :initform 10000 :export t)
     (height  :accessor height :initarg :height :initform 216 :export t)
     (inverse :accessor inverse :initarg :inverse :initform nil :export t)
+    (showgrid :accessor showgrid :initarg :showgrid :initform t :export t)
     (elements :accessor elements :initarg :elements :initform nil :export t)
     (last-id :accessor last-id :initarg :last-id :initform 1000 :export t)
     (id-hash :accessor id-hash :initarg :id-hash :initform (make-hash-table) :export t)))
@@ -388,9 +398,9 @@
 (defmethod print-head-to-stream ((obj svg-file) stream)
   (if *inverse*
       (format stream (header obj) (sv obj 'width) (sv obj 'height)
-              (sv obj 'width) (sv obj 'height) "000000" "1.0")
+              (sv obj 'width) (sv obj 'height) "000000" "1.0" (if (sv obj 'showgrid) "true" "false"))
       (format stream (header obj) (sv obj 'width) (sv obj 'height)
-              (sv obj 'width) (sv obj 'height) "FFFFFF" "0.0")))
+              (sv obj 'width) (sv obj 'height) "FFFFFF" "0.0" (if (sv obj 'showgrid) "true" "false"))))
 
 (defmethod print-head-to-stream ((obj svg-layer) stream)
   (with-slots (name id insensitive visible) obj

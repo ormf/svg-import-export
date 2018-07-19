@@ -93,3 +93,4 @@ Export the modified object to "/tmp/test2.svg":
   (export-svg-file *test* :fname "/tmp/test2.svg")
 #+END_SRC
 
+For a plotting example see [[file:examples/plotting-example.lisp][plotting-example.lisp]] 

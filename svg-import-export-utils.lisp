@@ -105,9 +105,10 @@
 ;;; create a midi-editor style piano-roll layer with horizontal white
 ;;; and grey stripes.
 
-(defun svg-piano-roll (svg-file)
+(defun svg-piano-roll (svg-file &key (visible t) (width 10000))
   (append (list (make-instance 'svg-tl-layer :name "PianoRoll" :id (new-id svg-file 'layer-ids)
-                               :insensitive t))
+                               :insensitive t
+                               :visible visible))
           (list (cons (make-instance 'svg-group
                                      :id (new-id svg-file 'group-ids))
                       (append
@@ -115,7 +116,7 @@
                           collect (make-instance 'svg-rect 
                                                  :x 0
                                                  :y (- pitch 0.5)
-                                                 :width 10000
+                                                 :width width
                                                  :height 1
                                                  :stroke-color "#aaaaaa"
                                                  :stroke-width 0.1
@@ -124,7 +125,7 @@
                           collect (make-instance 'svg-rect 
                                                  :x 0
                                                  :y (- pitch 0.5)
-                                                 :width 10000
+                                                 :width width
                                                  :height 1
                                                  :stroke-width 0.1
                                                  :stroke-color "#aaaaaa"
@@ -138,15 +139,16 @@
 ;;; and staff-systems will align them correctly.
 
 
-(defun svg-staff-system (svg-file)
-  (append (list (make-instance 'svg-tl-layer :name "Stafflines" :id (new-id svg-file 'layer-ids) :insensitive t))
+(defun svg-staff-system (svg-file &key (visible t) (width 10000))
+  (append (list (make-instance 'svg-tl-layer :name "Stafflines" :id (new-id svg-file 'layer-ids) :insensitive t
+                               :visible visible))
           (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
                       (append
                        (loop for pitch in *staff-lines*
                           collect (make-instance 'svg-line
                                                  :x1 0
                                                  :y1 pitch
-                                                 :x2 10000
+                                                 :x2 width
                                                  :y2 pitch
                                                  :stroke-color "#000000"
                                                  :stroke-width 0.2
@@ -155,7 +157,7 @@
                           collect (make-instance 'svg-line
                                                  :x1 0
                                                  :y1 pitch
-                                                 :x2 10000
+                                                 :x2 width
                                                  :y2 pitch
                                                  :stroke-color "#eeeeee"
                                                  :stroke-width 0.4
