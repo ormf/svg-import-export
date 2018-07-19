@@ -428,6 +428,14 @@ is exhausted."
               (cxml-stp:value (cxml-stp:find-attribute-named node "style")))))
     0)))
 
+(defun get-fill-color (node)
+  (aref
+   (second (multiple-value-list
+            (cl-ppcre:scan-to-strings
+             "fill:(#[0-9a-fA-F]+)"
+             (cxml-stp:value (cxml-stp:find-attribute-named node "style")))))
+   0))
+
 
 (defun get-id (node)
   (cxml-stp:value (cxml-stp:find-attribute-named node "id")))
@@ -446,8 +454,8 @@ is exhausted."
          ((circle? child) (push (append
                                  (get-coords child transformation :xquantize xquantize
                                              :yquantize yquantize)
-                                 (list (get-fill-opacity child)
-                                       (get-id child)))
+                                 (list (get-fill-color child)
+                                       (get-fill-opacity child)))
                                 result))))
      layer)
     (reverse result)))
@@ -486,12 +494,13 @@ is exhausted."
 
 ;; (make-pathname :directory '(:absolute "tmp") :name "test.svg")
 
-(defun get-points-from-file (&key (fname #P"/tmp/test.svg") (xquantize t) (yquantize t) (layer-name "Punkte"))
+(defun get-points-from-file (&key (fname #P"/tmp/test.svg") (xquantize t)(x-offset 0) (timescale 1) (yquantize t) (layer-name "Punkte"))
   "extract all circle objects (points) in the layer \"Punkte\" of svg infile."
+  (declare (ignore timescale x-offset))
   (collect-points
    (get-layer
     layer-name
-    (cxml:parse
+    (cxml:parse-file
      fname
      (stp:make-builder)))
    nil :xquantize xquantize :yquantize yquantize))
@@ -502,7 +511,7 @@ is exhausted."
   (collect-lines
    (get-layer
     layer-name
-    (cxml:parse
+    (cxml:parse-file
      fname
      (stp:make-builder)))
    nil :xquantize xquantize :yquantize yquantize

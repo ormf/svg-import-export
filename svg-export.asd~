@@ -1,9 +1,0 @@
-;;;; svg-export.asd
-
-(asdf:defsystem #:svg-export
-  :serial t
-  :depends-on (#:orm-utils)
-  :components ((:file "package")
-               (:file "svg-export")
-	       (:file "svg-export-utils")))
-

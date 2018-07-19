@@ -164,76 +164,67 @@
 ;;; transform simple lists containing x,y and optional color or opacity
 ;;; to svg circle objects. Sublists are treated as groups.
 
-(defun points->svg (list svg-file &key (color +black+) (radius 0.5))  
+(defun points->svg (list svg-file &key color opacity (radius 0.5))  
   (loop for point in list
      collect
        (if (numberp (car point))
-           (if (nth 3 point)
-               (destructuring-bind (cx cy color opacity) point
-                 (make-instance 'svg-point :cx cx :cy cy 
-                                :rx radius :ry radius
-                                :stroke-width 0
-                                ;;                                      :stroke-color (color-lookup color) 
-                                :opacity opacity
-                                :fill-color color
-                                :id (new-id svg-file 'point-ids)))
-               (if (nth 2 point)
-                   (destructuring-bind (cx cy color) point
-                     (make-instance 'svg-point :cx cx :cy cy 
-                                    :rx radius :ry radius
-                                    :stroke-width 0
-                                    ;;                                      :stroke-color (color-lookup color) 
-                                    :fill-color color
-                                    :id (new-id svg-file 'point-ids)))
-                   (destructuring-bind (cx cy) point
-                     (make-instance 'svg-point :cx cx :cy cy 
-                                    :rx radius :ry radius
-                                    :stroke-width 0
-                                    ;;                                      :stroke-color (color-lookup color) 
-                                    :fill-color color
-                                    :id (new-id svg-file 'point-ids)))))
+           (destructuring-bind (cx cy &optional l-color l-opacity) point
+             (make-instance 'svg-point :cx cx :cy cy 
+                            :rx radius :ry radius
+                            :stroke-width 0
+                            ;;                                      :stroke-color (color-lookup color) 
+                            :opacity (or opacity l-opacity)
+                            :fill-color (or color l-color +black+)
+                            :id (new-id svg-file 'point-ids)))
            (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
-                 (list->svg-points point svg-file)))))
+                 (points->svg point svg-file :color color :opacity opacity)))))
 
 ;;; transform simple lists containing x, y, width and optional color or
 ;;; opacity to horizontal svg line objects. Sublists are treated as groups.
 
-(defun lines->svg (list svg-file &key (color +black+) (stroke-width 0.5))  
+(defun lines->svg (list svg-file &key color opacity (stroke-width 0.5))  
   (loop for line in list
      collect
        (if (numberp (car line))
-           (cond ((nth 4 line)
-                  (destructuring-bind (x1 y1 width color opacity) line
-                    (make-instance 'svg-line :x1 x1 :y1 y1
-                                
-                                   :x2 (+ x1 width) :y2 y1
-                                   :stroke-width stroke-width
-                                   :opacity opacity
-                                   :stroke-color color 
-;;                                   :fill-color color
-                                   :id (new-id svg-file 'line-ids)
-                                   )))
-                 ((nth 3 line)
-                  (destructuring-bind (x1 y1 width color) line
-                    (make-instance 'svg-line :x1 x1 :y1 y1
-                                
-                                   :x2 (+ x1 width) :y2 y1
-                                   :stroke-width stroke-width
-                                   :stroke-color color
-;;                                   :fill-color color
-                                   :id (new-id svg-file 'line-ids))))
-                 (t
-                  (destructuring-bind (x1 y1 width) line
-                    (make-instance 'svg-line :x1 x1 :y1 y1
-                                
-                                   :x2 (+ x1 width) :y2 y1
-                                   :stroke-width stroke-width
-                                   :stroke-color color
-;;                                   :fill-color color
-                                   :id (new-id svg-file 'line-ids)))))
+           (destructuring-bind (x1 y1 width &optional l-color l-opacity) line
+             (make-instance 'svg-line :x1 x1 :y1 y1
+                            :x2 (+ x1 width) :y2 y1
+                            :stroke-width stroke-width
+                            :opacity (or opacity l-opacity 1)
+                            :stroke-color (or color l-color +black+) 
+                            ;; :fill-color (or l-color color)
+                            :id (new-id svg-file 'line-ids)))
            (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
-                 (list->svg-lines line svg-file)))))
+                 (lines->svg line svg-file :color color :opacity opacity)))))
 
+(defun flatten-fn (list &key (fn #'car))
+  "remove all brackets except the outmost in list. Use fn for
+   determining the minimum depth of the final list.
+   Example:
+
+   (flatten-fn '((a b) (((c d) (e f)) (g h)) (i k)))
+   -> (a b c d e f g h i k)
+
+   (flatten-fn '((a b) (((c d) (e f)) (g h)) (i k)) :fn #'caar)
+   -> ((a b) (c d) (e f) (g h) (i k))
+   "
+  (cond ((null list) nil)
+        ((consp (funcall fn list))
+         (append (flatten-fn (first list) :fn fn)
+                 (flatten-fn (rest list) :fn fn)))
+        (t (cons (first list)
+                 (flatten-fn (rest list) :fn fn)))))
+
+(defun svg->points (&key (infile #P"/tmp/test.svg") (timescale 1) (xquantize t) (yquantize t) (x-offset 0) (layer "Punkte"))
+  "extract all circle objects (points) in the layer \"Punkte\" of svg infile.
+Also removes duplicates and flattens subgroups. Points are simple
+two-element lists containing x and y coordinates. The y coordinate is
+supposed to be a midifloat value, x ist translated into secs/beats."
+  (sort
+   (remove-duplicates
+    (flatten-fn (get-points-from-file :fname infile :timescale timescale :x-offset x-offset :xquantize xquantize :yquantize yquantize :layer-name layer) :fn #'caar)
+    :test #'equal)
+   (lambda (x y) (< (first x) (first y)))))
 
 (defun svg->lines (&key (infile #P"/tmp/test.svg") (timescale 1) (xquantize t) (yquantize t) (x-offset 0) (layer "Punkte"))
   "extract all circle objects (points) in the layer \"Punkte\" of svg infile.
@@ -242,7 +233,7 @@ two-element lists containing x and y coordinates. The y coordinate is
 supposed to be a midifloat value, x ist translated into secs/beats."
   (sort
    (remove-duplicates
-    (ou:flatten-fn (get-lines-from-file :fname infile :timescale timescale :x-offset x-offset :xquantize xquantize :yquantize yquantize :layer layer) :fn #'caar)
+    (flatten-fn (get-lines-from-file :fname infile :timescale timescale :x-offset x-offset :xquantize xquantize :yquantize yquantize :layer-name layer) :fn #'caar)
     :test #'equal)
    (lambda (x y) (< (first x) (first y)))))
 
@@ -275,7 +266,7 @@ supposed to be a midifloat value, x ist translated into secs/beats."
 (defun regenerate-points (svg-file &key (fname #P"/tmp/test.svg") (xquantize t) (yquantize t))
   (append 
    (list (make-instance 'svg-tl-layer :name "Punkte" :id (new-id svg-file 'layer-ids)))
-   (list->svg-points (get-points-from-file :fname fname :xquantize xquantize :yquantize yquantize) svg-file)))
+   (points->svg (get-points-from-file :fname fname :xquantize xquantize :yquantize yquantize) svg-file)))
 
 ;;; as the name specifies, an input file is read and a new file is
 ;;; exported with all points set to their original shape.

@@ -1,5 +1,0 @@
-;;; (ql:quickload "quickproject")
-;;; (quickproject:make-project "/home/orm/work/programmieren/lisp/svg-export/")
-;;;                            :depends-on '("cxml-stp"))
-;;; danach den code in docbooktotex.lisp schreiben, emacs neu starten und:
-;;; (ql:quickload "docbooktotex")

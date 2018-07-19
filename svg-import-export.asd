@@ -15,8 +15,8 @@
                #:cl-FAD)
   :components ((:file "package")
                (:file "svg-macros")
-               (:file "svg-classes") :depends-on ("svg-macros")
+               (:file "svg-classes" :depends-on ("svg-macros"))
                (:file "svg-export" :depends-on ("svg-classes"))
-               (:file "svg-import") :depends-on ("svg-classes")
+               (:file "svg-import" :depends-on ("svg-classes"))
 	       (:file "svg-import-export-utils")))
 
