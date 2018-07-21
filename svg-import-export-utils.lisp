@@ -139,6 +139,32 @@
 ;;; and staff-systems will align them correctly.
 
 
+(defun svg-barlines (svg-file &key (visible t) (width 10000) (x-scale 8))
+  (append (list (make-instance 'svg-layer :name "Barlines" :id (new-id svg-file 'layer-ids) :insensitive t
+                               :visible visible))
+          (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
+                      (append
+                       (loop for time from 0 to width by (* x-scale 4)
+                          collect (make-instance 'svg-line
+                                                 :x1 (float time)
+                                                 :y1 29.5
+                                                 :x2 (float time)
+                                                 :y2 138.50
+                                                 :stroke-color "#000000"
+                                                 :stroke-width 0.25
+                                                 :id (new-id svg-file 'line-ids))))))
+          (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
+                      (append
+                       (loop for time from 0 to width by (* x-scale 4)
+                          for barnum from 1
+                          collect (make-instance 'svg-text
+                                                 :label (format nil "~d" barnum)
+                                                 :x (float time)
+                                                 :y 29
+                                                 :fill-color +black+
+                                                 :font-size 6
+                                                 :id (new-id svg-file 'text-ids))))))))
+
 (defun svg-staff-system (svg-file &key (visible t) (width 10000))
   (append (list (make-instance 'svg-tl-layer :name "Stafflines" :id (new-id svg-file 'layer-ids) :insensitive t
                                :visible visible))

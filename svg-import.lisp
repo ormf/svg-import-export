@@ -77,27 +77,21 @@ if there were an empty string between them."
 
 (defun read-op (str)
   "parse a svg transformation string and return the transformation
-name and its arguments as a list. Returns nil for empty transformation
-string."
+function and its arguments as a list. Returns nil for an empty
+transformation string."
   (unless (string= str "")
-    (let ((count 0))
+    (let ((split-point (position #\( str)))
       (list
-       (read-from-string
-        (coerce
-         (loop
-            for char across str
-            until (char= char #\()
-            do (incf count)
-            collect char)
-         'string))
-       (read-from-string (substitute #\SPACE #\, (subseq str count)))))))
+       (symbol-function
+        (intern (string-upcase (subseq str 0 split-point)) :svg-ie))
+       (read-from-string (substitute #\SPACE #\, (subseq str split-point)))))))
 
 ;;; (read-op "translate(12,27)") -> (translate (12 27))
 ;;; (read-op "") -> nil
 
 (defun get-transformation-mtx (transforms)
   "returns the 2x3 matrix of the supplied svg transformation string
-(a series of transformations separated by a single space). The
+   (a series of transformations separated by a single space). The
 transformations are executed from left to right."
   (reduce
    #'mtx-mult
@@ -106,12 +100,13 @@ transformations are executed from left to right."
          (split-by-one-space transforms)
        collect (destructuring-bind (fn args)
                    (read-op transformation)
-                 (apply (symbol-function fn) args))))))
+                 (apply fn args))))))
 
 
 #|
 (get-transformation-mtx
- "translate(196.02814,156.95225) matrix(0.9330498,0,0,2.8503305,0.24844852,-155.11236)") (0.9330498 0.0 0.0 2.8503306 183.15245 292.25345)
+ "translate(196.02814,156.95225) matrix(0.9330498,0,0,2.8503305,0.24844852,-155.11236)")
+-> (0.9330498 0.0 0.0 2.8503306 183.15245 292.25345)
 |#
 
 (defun vec-mtx-mult (vec mtx)
