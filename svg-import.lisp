@@ -41,7 +41,7 @@
 (defun matrix (x1 y1 x2 y2 x3 y3)
   (list x1 y1 x2 y2 x3 y3))
 
-(defun translate (tx ty)
+(defun translate (tx &optional (ty 0))
   (list 1 0 0 1 tx ty))
 
 (defun ang->rad (angle)
@@ -333,77 +333,95 @@ is exhausted."
 (defun lineto-rel (curr-coords mv-coords)
   (mapcar #'+ curr-coords mv-coords))
 
+(defun vlineto-abs (curr-coords mv-coords)
+  (list (first curr-coords) (second mv-coords)))
+
+(defun vlineto-rel (curr-coords mv-coords)
+  (list (first curr-coords) (+ (second curr-coords) (first mv-coords))))
 
 (defun parse-path2 (str)
-  (let ((fn (make-string-parser (substitute #\SPACE #\, str)))
-        (cmd nil)
-        (curr-coords '(0 0)))
-    (mapcar
-     (lambda (x) (setf curr-coords (funcall (first x) curr-coords (rest x))))
-     (loop
-        for s = (funcall fn)
-        while s
-        collect (cond
-                  ((string= s "m")
-                   (progn
-                     (setf cmd 'lineto-rel)
-                     (list 'move-rel (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
-                  ((string= s "l")
-                   (progn
-                     (setf cmd 'lineto-rel)
-                     (list 'lineto-rel (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
-                  ((string= s "h")
-                   (progn
-                     (setf cmd 'lineto-rel)
-                     (list 'lineto-rel (read-from-string (funcall fn)) 0)))
-                  ((string= s "M")
-                   (progn
-                     (setf cmd 'lineto-abs)
-                     (list 'move-abs  (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
-                  ((string= s "L")
-                   (progn
-                     (setf cmd 'lineto-abs)
-                     (list 'lineto-abs  (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
-                  ((string= s "H")
-                   (progn
-                     (setf cmd 'hlineto-abs)
-                     (list 'hlineto-abs (read-from-string (funcall fn)) (first curr-coords))))
-                  (t (list cmd (read-from-string s) (read-from-string (funcall fn)))))))))
+  (if (string/= str "")
+      (let ((fn (make-string-parser (substitute #\SPACE #\, str)))
+            (cmd nil)
+            (curr-coords '(0 0)))
+        (mapcar
+         (lambda (x) (setf curr-coords (funcall (first x) curr-coords (rest x))))
+         (loop
+            for s = (funcall fn)
+            while s
+            collect (cond
+                      ((string= s "m")
+                       (progn
+                         (setf cmd 'lineto-rel)
+                         (list 'move-rel (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
+                      ((string= s "l")
+                       (progn
+                         (setf cmd 'lineto-rel)
+                         (list 'lineto-rel (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
+                      ((string= s "h")
+                       (progn
+                         (setf cmd 'lineto-rel)
+                         (list 'lineto-rel (read-from-string (funcall fn)) 0)))
+                      ((string= s "v")
+                       (progn
+                         (setf cmd 'vlineto-rel)
+                         (list 'vlineto-rel (read-from-string (funcall fn)) (first curr-coords))))
+                      ((string= s "M")
+                       (progn
+                         (setf cmd 'lineto-abs)
+                         (list 'move-abs  (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
+                      ((string= s "L")
+                       (progn
+                         (setf cmd 'lineto-abs)
+                         (list 'lineto-abs  (read-from-string (funcall fn)) (read-from-string (funcall fn)))))
+                      ((string= s "H")
+                       (progn
+                         (setf cmd 'hlineto-abs)
+                         (list 'hlineto-abs (read-from-string (funcall fn)) (first curr-coords))))
+                      ((string= s "V")
+                       (progn
+                         (setf cmd 'vlineto-abs)
+                         (list 'vlineto-abs (read-from-string (funcall fn)) (first curr-coords))))
+                      (t (list cmd (read-from-string s) (read-from-string (funcall fn))))))))))
 
 #|
 
 (parse-path2 "m 791.74452,-73.99904 16,0")
 (parse-path2 "m 791.74452,-73.99904 h 16")
+(parse-path2 "m 791.74452,-73.99904 v 0")
 (parse-path2 "m 791.74452,-73.99904 H 800")
 (subseq "1 2 3" 3 nil)
 
 (parse-path2 "M 10,40 5,8")
+
 |#
 
-(defun get-path-coords (node transformation &key (x-offset 0) (timescale 1) (xquantize t) (yquantize t))
+(defun get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize t) (yquantize t))
   "return (list x y length color opacity) from path."
   (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
          (style-string (cxml-stp:value (cxml-stp:find-attribute-named node "style")))
-         (p1 (funcall #'vec-mtx-mult
-                    (first path)
-                    transformation))
-         (p2 (funcall #'vec-mtx-mult 
-                    (second path)
-                    transformation)))
-    (destructuring-bind ((x1 y1) (x2 y2)) (sort (list p1 p2) (lambda (x y) (< (first x) (first y))))
-      (declare (ignore y2))
-      (list
-       (if xquantize
-           (* (round (* 2 timescale (+ x-offset x1))) 0.5)
-           (+ x-offset x1))
-       (if yquantize
-           (round (* 1 y1))
-           (* 1 y1))
-       (if xquantize
-           (round (* timescale (- x2 x1)))
-           (- x2 x1))
-       (style-stroke-color style-string)
-       (style-opacity style-string)))))
+         (transformation (svg-parse-state-transformation parse-state)))
+    (if path
+        (destructuring-bind ((x1 y1) (x2 y2))
+            (sort
+             (list (funcall #'vec-mtx-mult (first path) transformation)
+                   (funcall #'vec-mtx-mult (second path) transformation))
+             #'< :key #'first)
+          (declare (ignore y2))
+          (list
+           (if xquantize
+               (* (round (* 2 timescale (+ x-offset x1))) 0.5)
+               (+ x-offset x1))
+           (if yquantize
+               (round (* 1 y1))
+               (* 1 y1))
+           (if xquantize
+               (round (* timescale (- x2 x1)))
+               (- x2 x1))
+           (style-stroke-color style-string)
+           (* (svg-parse-state-opacity parse-state)
+              (style-opacity style-string))))
+        (warn "~a is empty!" (cxml-stp:value (cxml-stp:find-attribute-named node "id"))))))
 
 (defun update-transformation (curr-transformation node)
   (let ((new-transform (cxml-stp:find-attribute-named node "transform")))
@@ -413,6 +431,36 @@ is exhausted."
          (get-transformation-mtx
           (cxml-stp:value new-transform)))
         curr-transformation)))
+
+;;; "opacity:0.22"
+
+(declaim (inline style-string))
+(defun style-string (node)
+  (alexandria:if-let ((style-attr (cxml-stp:find-attribute-named node "style")))
+    (cxml-stp:value style-attr)))
+
+(defun get-opacity (node)
+  (let* ((style-string (style-string node)))
+    (and style-string
+         (multiple-value-bind (_1 _2 rstart rend) (cl-ppcre:scan "opacity:\([0-9\.]\+\)" style-string)
+    (declare (ignore _1 _2))
+    (if rstart
+        (read-from-string (subseq style-string (aref rstart 0) (aref rend 0))))))))
+
+(defun update-state (state node)
+  (let ((new-transform (cxml-stp:find-attribute-named node "transform"))
+        (opacity (get-opacity node)))
+    (if new-transform
+        (setf (svg-parse-state-transformation state)
+              (mtx-mult
+               (svg-parse-state-transformation state)
+               (get-transformation-mtx
+                (cxml-stp:value new-transform))))
+        state)
+    (if opacity
+        (setf (svg-parse-state-opacity state)
+              (* opacity (svg-parse-state-opacity state))))
+    state))
 
 (defun get-fill-opacity (node)
   (read-from-string
@@ -455,7 +503,7 @@ is exhausted."
      layer)
     (reverse result)))
 
-(defun collect-lines (layer transformation &key (timescale 1) (x-offset 0) (xquantize t) (yquantize t))
+(defun collect-lines (layer parse-state &key (timescale 1) (x-offset 0) (xquantize t) (yquantize t))
   (let ((result '()))
     (if (and layer (visible? layer))
         (progn
@@ -464,19 +512,19 @@ is exhausted."
            (lambda (child)
              (cond
                ((and (group? child) (visible? child))
-                (let ((inner-transformation (update-transformation transformation child)))
-                  (let ((res (collect-lines child inner-transformation
+                (let ((inner-parse-state (update-state (copy-svg-parse-state parse-state) child)))
+                  (let ((res (collect-lines child inner-parse-state
                                             :x-offset x-offset
                                             :timescale timescale
                                             :xquantize xquantize
                                             :yquantize yquantize)))
                     (if res (push res result)))))
-               ((path? child) (push (get-path-coords child transformation
-                                                     :xquantize xquantize
-                                                     :yquantize yquantize
-                                                     :x-offset x-offset
-                                                     :timescale timescale)
-                                    result))))
+               ((path? child) (ou:push-if (get-path-coords child parse-state
+                                                        :xquantize xquantize
+                                                        :yquantize yquantize
+                                                        :x-offset x-offset
+                                                        :timescale timescale)
+                                       result))))
            layer)
           (reverse result)))))
 
@@ -502,6 +550,11 @@ is exhausted."
      (stp:make-builder)))
    nil :xquantize xquantize :yquantize yquantize))
 
+(defstruct svg-parse-state
+  (transformation nil)
+  (opacity 1.0))
+
+
 
 (defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize t) (yquantize t) (layer-name "Punkte"))
   "extract all line objects) in the layer \"Punkte\" of svg infile."
@@ -511,7 +564,8 @@ is exhausted."
     (cxml:parse-file
      fname
      (stp:make-builder)))
-   nil :xquantize xquantize :yquantize yquantize
+   (make-svg-parse-state)
+   :xquantize xquantize :yquantize yquantize
    :x-offset x-offset :timescale timescale))
 
 #|

@@ -139,12 +139,12 @@
 ;;; and staff-systems will align them correctly.
 
 
-(defun svg-barlines (svg-file &key (visible t) (width 10000) (x-scale 8))
+(defun svg-barlines (svg-file &key (visible t) (width 10000) (x-scale 8) (barstepsize 4) (startbar 1) (barmultiplier 1))
   (append (list (make-instance 'svg-layer :name "Barlines" :id (new-id svg-file 'layer-ids) :insensitive t
                                :visible visible))
           (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
                       (append
-                       (loop for time from 0 to width by (* x-scale 4)
+                       (loop for time from 0 to width by (* x-scale barstepsize)
                           collect (make-instance 'svg-line
                                                  :x1 (float time)
                                                  :y1 29.5
@@ -155,8 +155,8 @@
                                                  :id (new-id svg-file 'line-ids))))))
           (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
                       (append
-                       (loop for time from 0 to width by (* x-scale 4)
-                          for barnum from 1
+                       (loop for time from 0 to width by (* x-scale barstepsize)
+                          for barnum from startbar by barmultiplier
                           collect (make-instance 'svg-text
                                                  :label (format nil "~d" barnum)
                                                  :x (float time)
