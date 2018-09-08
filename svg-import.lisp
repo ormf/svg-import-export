@@ -400,7 +400,7 @@ is exhausted."
   "return (list x y length color opacity) from path."
   (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
          (style-string (cxml-stp:value (cxml-stp:find-attribute-named node "style")))
-         (transformation (svg-parse-state-transformation parse-state)))
+         (transformation (update-transformation (svg-parse-state-transformation parse-state) node)))
     (if path
         (destructuring-bind ((x1 y1) (x2 y2))
             (sort
