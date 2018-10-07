@@ -13,7 +13,8 @@
   :depends-on (#:xpath
                #:cxml-stp
                #:cl-ppcre
-               #:cl-FAD)
+               #:cl-FAD
+               #:orm-utils)
   :components ((:file "package")
                (:file "svg-macros")
                (:file "svg-classes" :depends-on ("svg-macros"))

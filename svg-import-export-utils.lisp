@@ -265,6 +265,18 @@ supposed to be a midifloat value, x ist translated into secs/beats."
     :test #'equal)
    (lambda (x y) (< (first x) (first y)))))
 
+(defun svg->lines (&key (infile #P"/tmp/test.svg") (timescale 1) (xquantize t) (yquantize t) (x-offset 0) (layer "Punkte"))
+  "extract all circle objects (points) in the layer \"Punkte\" of svg infile.
+Also removes duplicates and flattens subgroups. Points are simple
+two-element lists containing x and y coordinates. The y coordinate is
+supposed to be a midifloat value, x ist translated into secs/beats."
+  (sort
+   (remove-duplicates
+    (flatten-fn (get-lines-from-file :fname infile :timescale timescale :x-offset x-offset :xquantize xquantize :yquantize yquantize :layer-name layer) :fn #'caar)
+    :test #'equal)
+   #'<
+   :key (lambda (line) (getf line :x1))))
+
 (defun xscale-points (points xscale &key (xoffs 0))
   (cond ((null points) '())
         ((consp (caar points))

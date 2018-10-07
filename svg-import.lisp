@@ -394,8 +394,6 @@ is exhausted."
 
 (parse-path2 "M 10,40 5,8")
 
-|#
-
 (defun get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize t) (yquantize t))
   "return (list x y length color opacity) from path."
   (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
@@ -422,6 +420,43 @@ is exhausted."
            (* (svg-parse-state-opacity parse-state)
               (style-opacity style-string))))
         (warn "~a is empty!" (cxml-stp:value (cxml-stp:find-attribute-named node "id"))))))
+
+|#
+
+(defun get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize t) (yquantize t))
+  "return (list x y length color opacity) from path."
+  (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
+         (style-string (cxml-stp:value (cxml-stp:find-attribute-named node "style")))
+         (transformation (update-transformation (svg-parse-state-transformation parse-state) node)))
+    (if path
+        (destructuring-bind ((x1 y1) (x2 y2))
+            (sort
+             (list (funcall #'vec-mtx-mult (first path) transformation)
+                   (funcall #'vec-mtx-mult (second path) transformation))
+             #'< :key #'first)
+          (list :x1
+           (if xquantize
+               (* (round (* 2 timescale (+ x-offset x1))) 0.5)
+               (+ x-offset (* timescale x1)))
+           :y1
+           (if yquantize
+               (round (* 1 y1))
+               (* 1 y1))
+           :x2
+           (if xquantize
+               (round (* timescale x2))
+               (+ x-offset (* timescale x2)))
+           :y2
+           (if yquantize
+               (round (* 1 y2))
+               (* 1 y2))
+           :color
+           (style-stroke-color style-string)
+           :opacity
+           (* (svg-parse-state-opacity parse-state)
+              (style-opacity style-string))))
+        (warn "~a is empty!" (cxml-stp:value (cxml-stp:find-attribute-named node "id"))))))
+
 
 (defun update-transformation (curr-transformation node)
   (let ((new-transform (cxml-stp:find-attribute-named node "transform")))
