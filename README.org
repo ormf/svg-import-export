@@ -36,6 +36,24 @@ objects (or lists) in the rest of the list. The code creates an svg
 file with 8 squares and a time axis above. The file is stored in
 "/tmp/test.svg".
 
+
+#+BEGIN_SRC lisp
+;;; Syntax of :elements slot:
+
+({elem}*)
+
+;;; elem:
+
+<svg-rect> | 
+<svg-line> | 
+<svg-text> |
+<svg-point> |
+<svg-path> | 
+<svg-clone | 
+(<svg-tl-layer> {elem}*) | 
+(<svg-layer> {elem}*) | 
+(<svg-group> {elem}*)
+
 #+BEGIN_SRC lisp
   (in-package :svg-import-export)
   (defparameter *test* nil)
