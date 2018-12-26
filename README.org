@@ -28,6 +28,8 @@ Make sure you have [[https://www.quicklisp.org/beta/][Quicklisp]] installed and 
   (in-package :svg-import-export)
 #+END_SRC
 
+** Example
+
 In the example we first create an svg-file instance and then fill the
 'elements slot with objects. SVG group elements like layers and groups
 are represented as (possibly nested) lists with a group or layer
@@ -35,24 +37,6 @@ object as first element and the contents of the group or layer as
 objects (or lists) in the rest of the list. The code creates an svg
 file with 8 squares and a time axis above. The file is stored in
 "/tmp/test.svg".
-
-
-#+BEGIN_SRC lisp
-;;; Syntax of :elements slot:
-
-({elem}*)
-
-;;; elem:
-
-<svg-rect> | 
-<svg-line> | 
-<svg-text> |
-<svg-point> |
-<svg-path> | 
-<svg-clone | 
-(<svg-tl-layer> {elem}*) | 
-(<svg-layer> {elem}*) | 
-(<svg-group> {elem}*)
 
 #+BEGIN_SRC lisp
   (in-package :svg-import-export)
@@ -86,7 +70,7 @@ file with 8 squares and a time axis above. The file is stored in
 #+END_SRC
 
 If you use emacs with slime installed, you can inspect the elements
-slot of the svg-file object by pressing <C-c I> at the and of the
+slot of the svg-file object by pressing <C-c I> at the end of the
 following expression:
 
 #+BEGIN_SRC lisp
@@ -112,3 +96,25 @@ Export the modified object to "/tmp/test2.svg":
 #+END_SRC
 
 For a plotting example see [[file:examples/plotting-example.lisp][plotting-example.lisp]] 
+
+** Syntax of the 'elements slot of the svg-file class
+
+#+BEGIN_SRC lisp
+;;; :elements slot:
+
+({elem}*)
+
+;;; elem:
+
+<svg-rect> | 
+<svg-line> | 
+<svg-text> |
+<svg-point> |
+<svg-path> | 
+<svg-clone | 
+(<svg-tl-layer> {elem}*) | 
+(<svg-layer> {elem}*) | 
+(<svg-group> {elem}*)
+#+END_SRC
+
+For the exisiting slots of the different svg classes see [[file:classes.lisp][classes.lisp]]
