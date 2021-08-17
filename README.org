@@ -117,4 +117,5 @@ For a plotting example see [[file:examples/plotting-example.lisp][plotting-examp
 (<svg-group> {elem}*)
 #+END_SRC
 
-For the exisiting slots of the different svg classes see [[svg-classes.lisp]]
+For the exisiting slots of the different svg classes see the
+rexpective definitions in [[svg-classes.lisp]]

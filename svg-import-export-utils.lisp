@@ -132,12 +132,94 @@
                                                  :fill-color "#dddddd"
                                                  :id (new-id svg-file 'rect-ids))))))))
 
+
+(defun add-piano-roll (svg-file &rest args)
+  (let ((width (or (getf args :width) (width svg-file))))
+    (push
+     (append (list (make-instance 'svg-tl-layer :name "PianoRoll"
+                                                :id (new-id svg-file 'layer-ids)
+                                                :insensitive t
+                                                :visible (getf args :visible t)))
+             (list (cons (make-instance 'svg-group
+                                        :id (new-id svg-file 'group-ids))
+                         (append
+                          (loop for pitch in *white-keys*
+                                collect (make-instance 'svg-rect 
+                                                       :x 0
+                                                       :y (- pitch 0.5)
+                                                       :width width
+                                                       :height 1
+                                                       :stroke-color "#aaaaaa"
+                                                       :stroke-width 0.1
+                                                       :id (new-id svg-file 'rect-ids)))
+                          (loop for pitch in *black-keys*
+                                collect (make-instance 'svg-rect 
+                                                       :x 0
+                                                       :y (- pitch 0.5)
+                                                       :width width
+                                                       :height 1
+                                                       :stroke-width 0.1
+                                                       :stroke-color "#aaaaaa"
+                                                       :fill-color "#dddddd"
+                                                       :id (new-id svg-file 'rect-ids)))))))
+     (elements svg-file))))
+
 ;;; create a staffsystem layer with ledger lines for G^15ma, G, F and
 ;;; F_16bassa clefs. The clefs are not drawn and the distance of
 ;;; neighboring lines is poportional to the interval between them
 ;;; (major/minor third). This means that a juxtaposition of piano-roll
 ;;; and staff-systems will align them correctly.
 
+(defun svg-staff-system (svg-file &key (visible t) (width 10000))
+  (append (list (make-instance 'svg-tl-layer :name "Stafflines" :id (new-id svg-file 'layer-ids) :insensitive t
+                               :visible visible))
+          (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
+                      (append
+                       (loop for pitch in *staff-lines*
+                          collect (make-instance 'svg-line
+                                                 :x1 0
+                                                 :y1 pitch
+                                                 :x2 width
+                                                 :y2 pitch
+                                                 :stroke-color "#000000"
+                                                 :stroke-width 0.2
+                                                 :id (new-id svg-file 'line-ids)))
+                       (loop for pitch in *ledger-lines*
+                          collect (make-instance 'svg-line
+                                                 :x1 0
+                                                 :y1 pitch
+                                                 :x2 width
+                                                 :y2 pitch
+                                                 :stroke-color "#eeeeee"
+                                                 :stroke-width 0.4
+                                                 :id (new-id svg-file 'line-ids))))))))
+
+(defun add-staff-system (svg-file &rest args)
+  (let ((width (or (getf args :width) (width svg-file))))
+    (push
+     (append (list (make-instance 'svg-tl-layer :name "Stafflines" :id (new-id svg-file 'layer-ids) :insensitive t
+                                                :visible (getf args :visible t)))
+             (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
+                         (append
+                          (loop for pitch in *staff-lines*
+                                collect (make-instance 'svg-line
+                                                       :x1 0
+                                                       :y1 pitch
+                                                       :x2 width
+                                                       :y2 pitch
+                                                       :stroke-color "#000000"
+                                                       :stroke-width 0.2
+                                                       :id (new-id svg-file 'line-ids)))
+                          (loop for pitch in *ledger-lines*
+                                collect (make-instance 'svg-line
+                                                       :x1 0
+                                                       :y1 pitch
+                                                       :x2 width
+                                                       :y2 pitch
+                                                       :stroke-color "#eeeeee"
+                                                       :stroke-width 0.4
+                                                       :id (new-id svg-file 'line-ids)))))))
+     (elements svg-file))))
 
 (defun svg-barlines (svg-file &key (visible t) (width 10000) (x-scale 8) (barstepsize 4) (startbar 1) (barmultiplier 1))
   (append (list (make-instance 'svg-layer :name "Barlines" :id (new-id svg-file 'layer-ids) :insensitive t
@@ -165,40 +247,18 @@
                                                  :font-size 6
                                                  :id (new-id svg-file 'text-ids))))))))
 
-(defun svg-staff-system (svg-file &key (visible t) (width 10000))
-  (append (list (make-instance 'svg-tl-layer :name "Stafflines" :id (new-id svg-file 'layer-ids) :insensitive t
-                               :visible visible))
-          (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
-                      (append
-                       (loop for pitch in *staff-lines*
-                          collect (make-instance 'svg-line
-                                                 :x1 0
-                                                 :y1 pitch
-                                                 :x2 width
-                                                 :y2 pitch
-                                                 :stroke-color "#000000"
-                                                 :stroke-width 0.2
-                                                 :id (new-id svg-file 'line-ids)))
-                       (loop for pitch in *ledger-lines*
-                          collect (make-instance 'svg-line
-                                                 :x1 0
-                                                 :y1 pitch
-                                                 :x2 width
-                                                 :y2 pitch
-                                                 :stroke-color "#eeeeee"
-                                                 :stroke-width 0.4
-                                                 :id (new-id svg-file 'line-ids))))))))
 
 ;;; transform simple lists containing x,y and optional color or opacity
 ;;; to svg circle objects. Sublists are treated as groups.
 
-(defun points->svg (list svg-file &key color opacity (radius 0.5))  
+(defun points->svg (list svg-file &key color opacity radius)  
   (loop for point in list
      collect
        (if (numberp (car point))
-           (destructuring-bind (cx cy &optional l-color l-opacity) point
-             (make-instance 'svg-point :cx cx :cy cy 
-                            :rx radius :ry radius
+           (destructuring-bind (cx cy &optional (l-color "#000000") (l-opacity 1.0) (l-radius 0.5)) point
+             (make-instance 'svg-point
+                            :cx cx :cy cy 
+                            :rx (or radius l-radius) :ry (or radius l-radius)
                             :stroke-width 0
                             ;;                                      :stroke-color (color-lookup color) 
                             :opacity (or opacity l-opacity)
@@ -254,6 +314,7 @@ supposed to be a midifloat value, x ist translated into secs/beats."
     :test #'equal)
    (lambda (x y) (< (first x) (first y)))))
 
+#|
 (defun svg->lines (&key (infile #P"/tmp/test.svg") (timescale 1) (xquantize t) (yquantize t) (x-offset 0) (layer "Punkte"))
   "extract all circle objects (points) in the layer \"Punkte\" of svg infile.
 Also removes duplicates and flattens subgroups. Points are simple
@@ -264,6 +325,7 @@ supposed to be a midifloat value, x ist translated into secs/beats."
     (flatten-fn (get-lines-from-file :fname infile :timescale timescale :x-offset x-offset :xquantize xquantize :yquantize yquantize :layer-name layer) :fn #'caar)
     :test #'equal)
    (lambda (x y) (< (first x) (first y)))))
+|#
 
 (defun svg->lines (&key (infile #P"/tmp/test.svg") (timescale 1) (xquantize t) (yquantize t) (x-offset 0) (layer "Punkte"))
   "extract all circle objects (points) in the layer \"Punkte\" of svg infile.
@@ -325,7 +387,8 @@ supposed to be a midifloat value, x ist translated into secs/beats."
 ;; (renew-svg-file)
 
 (defun get-tick-lines (end-time svg-file &key
-                       (start 0) (interval 10) (length 5) (non-drawing-modulo nil)
+                                           (color "#000000")
+                                           (start 0) (interval 10) (length 5) (non-drawing-modulo nil)
                        (ypos 0) (gxoffs 20) (gyoffs 300) (xscale 1))
   (let ((modulo (if (numberp non-drawing-modulo)
                     (* non-drawing-modulo interval))))
@@ -339,13 +402,14 @@ supposed to be a midifloat value, x ist translated into secs/beats."
                                        :y1 (+ gyoffs ypos)
                                        :y2 (+ gyoffs ypos length)
                                        :stroke-width 0.2
-                                       :fill-color +black+
-                                       :stroke-color +black+))))))
+                                       :fill-color color
+                                       :stroke-color color))))))
 
 ;;; create a time axis with tick lines and text labels. The list of
 ;;; the ticks keyword defines, which tick lines are drawn. Each list
 ;;; element enables a tick line every 60, 30, 10, 5 and 1 seconds,
 ;;; respectively. Text labels are drawn every 30 seconds.
+#|
 
 (defun svg-zeitachse 
     (end-time svg-file &key 
@@ -353,77 +417,175 @@ supposed to be a midifloat value, x ist translated into secs/beats."
                          (gxoffs 20)
                          (gyoffs 300)
                          (xscale 1)
+                         (inverse nil)
+                         (ticks '(t t t t t)))
+  (let ((stroke-color (if inverse "#ffffff" "#000000")))
+    (list
+     (make-instance 'svg-layer 
+                    :name "Zeitachse" 
+                    :id (new-id svg-file 'layer-ids))
+     (list
+      (make-instance 'svg-group
+                     :id (new-id svg-file 'group-ids))
+      (append
+       (list
+        (make-instance 'svg-group
+                       :id (new-id svg-file 'group-ids))
+        (make-instance 'svg-line
+                       :id (new-id svg-file 'line-ids)
+                       :x1 gxoffs
+                       :x2 (+ gxoffs (* xscale end-time))
+                       :y1 (+ gyoffs ypos)
+                       :y2 (+ gyoffs ypos)
+                       :stroke-width 0.2
+                       :fill-color stroke-color
+                       :stroke-color stroke-color))
+       (if (nth 0 ticks) 
+           (get-tick-lines end-time svg-file 
+                           :color stroke-color
+                           :interval 60
+                           :length 10
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos))
+       (if (nth 1 ticks) 
+           (get-tick-lines end-time svg-file
+                           :color stroke-color
+                           :interval 30
+                           :non-drawing-modulo 2
+                           :length 8
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos))
+       (if (nth 2 ticks)
+           (get-tick-lines end-time svg-file
+                           :color stroke-color
+                           :interval 10
+                           :non-drawing-modulo 3
+                           :length 5
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos))
+       (if (nth 3 ticks) 
+           (get-tick-lines end-time svg-file
+                           :color stroke-color
+                           :interval 5
+                           :non-drawing-modulo 2
+                           :length 3
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos))
+       (if (nth 4 ticks) 
+           (get-tick-lines end-time svg-file
+                           :color stroke-color
+                           :interval 1
+                           :non-drawing-modulo 5
+                           :length 1
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos)))
+      (cons (make-instance 'svg-group
+                           :id (new-id svg-file 'group-ids))
+            (get-time-text end-time svg-file
+                           :color stroke-color
+                           :xscale xscale
+                           :gxoffs (- gxoffs 7.5)
+                           :gyoffs gyoffs
+                           :ypos (- ypos 2)))))))
+|#
+
+(defun svg-zeitachse 
+    (end-time svg-file &key
+                         (inverse nil)
+                         (ypos -50)
+                         (gxoffs 20)
+                         (gyoffs 300)
+                         (xscale 1)
                          (ticks '(t t t t t)))
   
-  
-  (list
-   (make-instance 'svg-layer 
-                  :name "Zeitachse" 
-                  :id (new-id svg-file 'layer-ids))
-   (append
-    (list
-     (make-instance 'svg-group
-                    :id (new-id svg-file 'group-ids))
-     (make-instance 'svg-line
-                    :id (new-id svg-file 'line-ids)
-                    :x1 gxoffs
-                    :x2 (+ gxoffs (* xscale end-time))
-                    :y1 (+ gyoffs ypos)
-                    :y2 (+ gyoffs ypos)
-                    :stroke-width 0.2
-                    :fill-color +black+
-                    :stroke-color +black+))
-    (if (nth 0 ticks) 
-        (get-tick-lines end-time svg-file 
-                        :interval 60
-                        :length 10
-                        :xscale xscale
-                        :gxoffs gxoffs
-                        :gyoffs gyoffs
-                        :ypos ypos))
-    (if (nth 1 ticks) 
-        (get-tick-lines end-time svg-file
-                        :interval 30
-                        :non-drawing-modulo 2
-                        :length 8
-                        :xscale xscale
-                        :gxoffs gxoffs
-                        :gyoffs gyoffs
-                        :ypos ypos))
-    (if (nth 2 ticks)
-        (get-tick-lines end-time svg-file
-                        :interval 10
-                        :non-drawing-modulo 3
-                        :length 5
-                        :xscale xscale
-                        :gxoffs gxoffs
-                        :gyoffs gyoffs
-                        :ypos ypos))
-    (if (nth 3 ticks) 
-        (get-tick-lines end-time svg-file
-                        :interval 5
-                        :non-drawing-modulo 2
-                        :length 3
-                        :xscale xscale
-                        :gxoffs gxoffs
-                        :gyoffs gyoffs
-                        :ypos ypos))
-    (if (nth 4 ticks) 
-        (get-tick-lines end-time svg-file
-                        :interval 1
-                        :non-drawing-modulo 5
-                        :length 1
-                        :xscale xscale
-                        :gxoffs gxoffs
-                        :gyoffs gyoffs
-                        :ypos ypos)))
-   (cons (make-instance 'svg-group
-                        :id (new-id svg-file 'group-ids))
-         (get-time-text end-time svg-file
-                        :xscale xscale
-                        :gxoffs (- gxoffs 7.5)
-                        :gyoffs gyoffs
-                        :ypos (- ypos 2)))))
+  (let ((stroke-color (if inverse "#ffffff" "#000000")))  
+    (add-elements
+     (make-instance 'svg-layer 
+                    :name "Zeitachse" 
+                    :id (new-id svg-file 'layer-ids))
+     (add-elements
+      (make-instance 'svg-group
+                     :id (new-id svg-file 'group-ids))
+      (add-elements
+       (make-instance 'svg-group
+                      :id (new-id svg-file 'group-ids))
+       (make-instance 'svg-line
+                      :id (new-id svg-file 'line-ids)
+                      :x1 gxoffs
+                      :x2 (+ gxoffs (* xscale end-time))
+                      :y1 (+ gyoffs ypos)
+                      :y2 (+ gyoffs ypos)
+                      :stroke-width 0.2
+                      :fill-color stroke-color
+                      :stroke-color stroke-color)
+       (if (nth 0 ticks) 
+           (get-tick-lines end-time svg-file
+                           :color stroke-color
+                           :interval 60
+                           :length 10
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos))
+       (if (nth 1 ticks) 
+           (get-tick-lines end-time svg-file
+                           :color stroke-color
+                           :interval 30
+                           :non-drawing-modulo 2
+                           :length 8
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos))
+       (if (nth 2 ticks)
+           (get-tick-lines end-time svg-file
+                           :color stroke-color
+                           :interval 10
+                           :non-drawing-modulo 3
+                           :length 5
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos))
+       (if (nth 3 ticks) 
+           (get-tick-lines end-time svg-file
+                           :color stroke-color
+                           :interval 5
+                           :non-drawing-modulo 2
+                           :length 3
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos))
+       (if (nth 4 ticks) 
+           (get-tick-lines end-time svg-file
+                           :color stroke-color
+                           :interval 1
+                           :non-drawing-modulo 5
+                           :length 1
+                           :xscale xscale
+                           :gxoffs gxoffs
+                           :gyoffs gyoffs
+                           :ypos ypos)))
+      (add-elements
+       (make-instance 'svg-group
+                      :id (new-id svg-file 'group-ids))
+       (get-time-text end-time svg-file
+                      :color stroke-color
+                      :xscale xscale
+                      :gxoffs (- gxoffs 7.5)
+                      :gyoffs gyoffs
+                      :ypos (- ypos 2)))))))
 
 #|
 
@@ -504,6 +666,7 @@ supposed to be a midifloat value, x ist translated into secs/beats."
 
 (defun get-time-text (end-time svg-file
                       &key
+                        (color "#000000")
                         (start 0)
                         (font-family "Arial")
                         (font-size 6)
@@ -522,8 +685,8 @@ supposed to be a midifloat value, x ist translated into secs/beats."
 					 (round (floor time 60))
 					 (mod time 60))
 			  :stroke-width 0.2
-			  :fill-color +black+
-			  :stroke-color +black+))))
+			  :fill-color color
+			  :stroke-color color))))
 
 
 ;; Original quo colors

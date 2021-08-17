@@ -423,10 +423,39 @@ is exhausted."
 
 |#
 
+;;; xml is picky with quotes in attributes, therefore we keep a list
+;;; of properties in an attribute of an svg element which should get
+;;; quoted on import to preserve case on reading with the lisp
+;;; reader. The property needs to be registered with
+;;; #'add-svg-attribute-prop-to quote
+
+(defparameter *svg-attr-props-to-quote* nil)
+
+(defun add-svg-attr-props-to-quote (&rest props)
+  (mapcar (lambda (prop) (pushnew prop *svg-attr-props-to-quote*)) props))
+
+(defun quote-svg-attr-prop (attr-str prop)
+  (multiple-value-bind (str reg)
+      (cl-ppcre:scan-to-strings ;;; this voodoo is to catch spaces in property value strings
+       (format nil "\(^.\*~S\) \+\([^:]\+\)\(.\*\)$" prop)
+       attr-str)
+    (declare (ignore str))
+    (if reg
+        (format nil "~a ~S ~a"
+                (aref reg 0)
+                (string-right-trim '(#\SPACE) (aref reg 1))
+                (aref reg 2))
+        attr-str)))
+
+(defun quote-svg-attr-props (str)
+  (reduce #'quote-svg-attr-prop *svg-attr-props-to-quote* :initial-value str))
+
 (defun get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize t) (yquantize t))
   "return (list x y length color opacity) from path."
   (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
          (style-string (cxml-stp:value (cxml-stp:find-attribute-named node "style")))
+         (attributes (and (cxml-stp:find-attribute-named node "attributes")
+                          (cxml-stp:value (cxml-stp:find-attribute-named node "attributes"))))
          (transformation (update-transformation (svg-parse-state-transformation parse-state) node)))
     (if path
         (destructuring-bind ((x1 y1) (x2 y2))
@@ -435,27 +464,30 @@ is exhausted."
                    (funcall #'vec-mtx-mult (second path) transformation))
              #'< :key #'first)
           (list :x1
-           (if xquantize
-               (* (round (* 2 timescale (+ x-offset x1))) 0.5)
-               (+ x-offset (* timescale x1)))
-           :y1
-           (if yquantize
-               (round (* 1 y1))
-               (* 1 y1))
-           :x2
-           (if xquantize
-               (round (* timescale x2))
-               (+ x-offset (* timescale x2)))
-           :y2
-           (if yquantize
-               (round (* 1 y2))
-               (* 1 y2))
-           :color
-           (style-stroke-color style-string)
-           :opacity
-           (* (svg-parse-state-opacity parse-state)
-              (style-opacity style-string))))
+                (if xquantize
+                    (* (round (* 2 timescale (+ x-offset x1))) 0.5)
+                    (+ x-offset (* timescale x1)))
+                :y1
+                (if yquantize
+                    (round (* 1 y1))
+                    (* 1 y1))
+                :x2
+                (if xquantize
+                    (round (* timescale x2))
+                    (+ x-offset (* timescale x2)))
+                :y2
+                (if yquantize
+                    (round (* 1 y2))
+                    (* 1 y2))
+                :color
+                (style-stroke-color style-string)
+                :opacity
+                (* (svg-parse-state-opacity parse-state)
+                   (style-opacity style-string))
+                :attributes (if attributes (read-from-string (format nil "(~a)" (quote-svg-attr-props attributes))))
+                ))
         (warn "~a is empty!" (cxml-stp:value (cxml-stp:find-attribute-named node "id"))))))
+
 
 
 (defun update-transformation (curr-transformation node)
@@ -588,8 +620,6 @@ is exhausted."
 (defstruct svg-parse-state
   (transformation nil)
   (opacity 1.0))
-
-
 
 (defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize t) (yquantize t) (layer-name "Punkte"))
   "extract all line objects) in the layer \"Punkte\" of svg infile."

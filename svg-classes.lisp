@@ -15,6 +15,7 @@
 (defparameter *svg-header* "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 <svg
+   style=\"background-color:~a\"
    xmlns:dc=\"http://purl.org/dc/elements/1.1/\"
    xmlns:cc=\"http://creativecommons.org/ns#\"
    xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"
@@ -86,8 +87,8 @@
   </defs>
 <sodipodi:namedview
      id=\"base\"
-     pagecolor=\"#~a\"
-     bordercolor=\"#666666\"
+     pagecolor=\"~a\"
+     bordercolor=\"666666\"
      borderopacity=\"1.0\"
      inkscape:pageopacity=\"~3,1f\"
      inkscape:pageshadow=\"2\"
@@ -133,33 +134,35 @@
 ")
 
 (def-exporting-class svg-file ()
-   ((header :accessor header :initarg :header :initform *svg-header* :export t)
-    (width  :accessor width :initarg :width :initform 10000 :export t)
-    (height  :accessor height :initarg :height :initform 216 :export t)
-    (inverse :accessor inverse :initarg :inverse :initform nil :export t)
-    (showgrid :accessor showgrid :initarg :showgrid :initform t :export t)
-    (elements :accessor elements :initarg :elements :initform nil :export t)
-    (last-id :accessor last-id :initarg :last-id :initform 1000 :export t)
-    (id-hash :accessor id-hash :initarg :id-hash :initform (make-hash-table) :export t)))
+  ((fname :accessor fname :initarg :fname :initform "/tmp/test.svg" :export t)
+   (header :accessor header :initarg :header :initform *svg-header* :export t)
+   (width  :accessor width :initarg :width :initform 10000 :export t)
+   (height  :accessor height :initarg :height :initform 216 :export t)
+   (inverse :accessor inverse :initarg :inverse :initform nil :export t)
+   (showgrid :accessor showgrid :initarg :showgrid :initform t :export t)
+   (elements :accessor elements :initarg :elements :initform nil :export t)
+   (last-id :accessor last-id :initarg :last-id :initform 1000 :export t)
+   (id-hash :accessor id-hash :initarg :id-hash :initform (make-hash-table) :export t)))
 
-(def-exporting-class svg-layer ()
-  ((id :accessor id :initarg :id :initform 0 :export t)
-   (insensitive :accessor insensitive :initarg :insensitive :initform nil :export t)
+(def-exporting-class svg-item ()
+  ((id :accessor id :initarg :id :initform nil :export t)
+   (svg-class :accessor svg-class :initarg :svg-class :initform nil :export t)))
+
+(def-exporting-class svg-group (svg-item)
+  ())
+
+(def-exporting-class svg-layer (svg-group)
+  ((insensitive :accessor insensitive :initarg :insensitive :initform nil :export t)
    (visible :accessor visible :initarg :visible :initform t :export t)
    (name :accessor name :initarg :name :initform "Ebene" :export t)))
 
-(def-exporting-class svg-tl-layer ()
-  ((id :accessor id :initarg :id :initform 0 :export t)
-   (insensitive :accessor insensitive :initarg :insensitive :initform nil :export t)
+(def-exporting-class svg-tl-layer (svg-group)
+  ((insensitive :accessor insensitive :initarg :insensitive :initform nil :export t)
    (visible :accessor visible :initarg :visible :initform t :export t)
    (name :accessor name :initarg :name :initform "Ebene" :export t)))
 
-(def-exporting-class svg-group ()
-  ((id :accessor id :initarg :id :initform 0 :export t)))
-
-(def-exporting-class svg-point ()
-  ((id :accessor id :initarg :id :initform 0 :export t)
-   (cx :accessor cx :initarg :cx :initform 0 :export t)
+(def-exporting-class svg-point (svg-item)
+  ((cx :accessor cx :initarg :cx :initform 0 :export t)
    (cy :accessor cy :initarg :cy :initform 0 :export t)
    (rx :accessor rx :initarg :rx :initform 10 :export t)
    (ry :accessor ry :initarg :ry :initform 10 :export t)
@@ -175,9 +178,8 @@
    (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)
    (opacity :accessor opacity :initarg :opacity :initform 1 :export t)))
 
-(def-exporting-class svg-line ()
-  ((id :accessor id :initarg :id :initform 0 :export t)
-   (x1 :accessor x1 :initarg :x1 :initform 0 :export t)
+(def-exporting-class svg-line (svg-item)
+  ((x1 :accessor x1 :initarg :x1 :initform 0 :export t)
    (y1 :accessor y1 :initarg :y1 :initform 0 :export t)
    (x2 :accessor x2 :initarg :x2 :initform 10 :export t)
    (y2 :accessor y2 :initarg :y2 :initform 0 :export t)
@@ -190,11 +192,11 @@
    (stroke-linejoin :accessor stroke-linejoin :initarg :stroke-linejoin :initform "miter" :export t)
    (marker-end :accessor marker-end :initarg :marker-end :initform nil :export t)
    (stroke-opacity :accessor stroke-opacity :initarg :stroke-opacity :initform 1 :export t)
-   (opacity :accessor opacity :initarg :opacity :initform 1 :export t)))
+   (opacity :accessor opacity :initarg :opacity :initform 1 :export t)
+   (attributes :accessor attributes :initarg :attributes :initform "none" :export t)))
 
-(def-exporting-class svg-rect ()
-  ((id :accessor id :initarg :id :initform 0 :export t)
-   (x :accessor x :initarg :x :initform 0 :export t)
+(def-exporting-class svg-rect (svg-item)
+  ((x :accessor x :initarg :x :initform 0 :export t)
    (y :accessor y :initarg :y :initform 0 :export t)
    (width :accessor width :initarg :width :initform 100 :export t)  
    (height :accessor height :initarg :height :initform 100 :export t)
@@ -208,11 +210,11 @@
    (fill-opacity :accessor fill-opacity :initarg :fill-opacity :initform 1 :export t)
    (opacity :accessor opacity :initarg :opacity :initform 1 :export t)))
 
-(def-exporting-class svg-text ()
-  ((id :accessor id :initarg :id :initform 0 :export t)
-   (label :accessor label :initarg :label :initform "" :export t)
+(def-exporting-class svg-text (svg-item)
+  ((label :accessor label :initarg :label :initform "" :export t)
    (y :accessor y :initarg :y :initform 0 :export t)
    (x :accessor x :initarg :x :initform 0 :export t)
+   (text-anchor :accessor text-anchor :initarg :text-anchor :initform "start" :export t)
    (font-size :accessor font-size :initarg :font-size :initform 12 :export t)
    (font-style :accessor font-style :initarg :font-style :initform "normal" :export t)
    (font-weight :accessor font-weight :initarg :font-weight :initform "normal" :export t)
@@ -228,9 +230,8 @@
   ))
 
 
-(def-exporting-class svg-path ()
-  ((id :accessor id :initarg :id :initform 0 :export t)
-   (d :accessor d :initarg :d :initform 0 :export t)
+(def-exporting-class svg-path (svg-item)
+  ((d :accessor d :initarg :d :initform 0 :export t)
    (fill-color :accessor fill-color :initarg :fill-color :initform "none" :export t)
    (fill-rule :accessor fill-rule :initarg :fill-rule :initform "evenodd" :export t)
    (fill-opacity :accessor fill-opacity :initarg :fill-opacity :initform 1 :export t)
@@ -244,9 +245,8 @@
 
 
 
-(def-exporting-class svg-clone ()
-  ((id :accessor id :initarg :id :initform 0 :export t)
-   (href :accessor href :initarg :href :initform "" :export t)
+(def-exporting-class svg-clone (svg-item)
+  ((href :accessor href :initarg :href :initform "" :export t)
    (transform :accessor transform :initarg :transform :initform "matrix(1,0,0,1,0,0)" :export t)))
 
 ;; (make-class-args '(id href transform))
@@ -287,21 +287,21 @@
 
 (defgeneric print-to-stream (obj stream))
 (defmethod print-to-stream ((obj svg-text) stream)
-  (with-slots (id y x font-size font-style font-weight fill-color fill-opacity stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity opacity font-family label) obj
+  (with-slots (id y x font-size text-anchor font-style font-weight fill-color fill-opacity stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity opacity font-family label) obj
     (format stream
             "<text
          id=\"text~a\"
          y=\"~a\"
          x=\"~a\"
          style=\"font-size:~apx;font-style:~a;font-weight:~a;opacity:~a;fill:~a;fill-opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;font-family:~a\"
-         xml:space=\"preserve\"><tspan
+         xml:space=\"preserve\"
+         text-anchor=\"~a\"><tspan
            y=\"~a\"
            x=\"~a\"
            font-size=\"~apx\"
            id=\"tspan~a\"
-           sodipodi:role=\"line\">~a</tspan>
-      </text>"
-            id y x font-size font-style font-weight opacity (get-color fill-color) fill-opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity font-family y x font-size id label)))
+           sodipodi:role=\"line\">~a</tspan></text>"
+            id y x font-size font-style font-weight opacity (get-color fill-color) fill-opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity font-family text-anchor y x font-size id label)))
 
 ;; (print-to-stream (make-instance 'svg-text :label "Testtext" :x 100 :y 117) t)
 
@@ -323,25 +323,27 @@
 (defmethod print-to-stream ((obj svg-line) stream)
   (with-slots
         (fill-color fill-opacity fill-rule opacity stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity
-                    x1 y1 x2 y2 id marker-end)
+                    x1 y1 x2 y2 id marker-end attributes)
       obj
     (if marker-end
         (format stream
                 "    <path
        style=\"fill:~a;fill-opacity:~a;fill-rule:~a;opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;marker-end:~a\"
        d=\"M ~a,~a L ~a,~a\"
-       id=\"path~a\" />
+       id=\"path~a\"
+       attributes=\"~a\" />
 "
                 (get-color fill-color) fill-opacity fill-rule opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity marker-end
-                x1 y1 x2 y2 id )
+                x1 y1 x2 y2 id attributes)
         (format stream
                 "    <path
        style=\"fill:~a;fill-opacity:~a;fill-rule:~a;opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a\"
        d=\"M ~a,~a L ~a,~a\"
-       id=\"path~a\" />
+       id=\"path~a\"
+       attributes=\"~a\" />
 "
                 (get-color fill-color) fill-opacity fill-rule opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity
-                x1 y1 x2 y2 id ))))
+                x1 y1 x2 y2 id attributes))))
 
 ;; (print-to-stream (make-instance 'svg-line :x1 :y1 :x2 :y2 :marker-end "url(#Arrow1Lend)") nil)
 
@@ -354,27 +356,28 @@
             "   <path
        style=\"fill:~a;fill-opacity:~a;fill-rule:~a;opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a\"
        d=\"~a\"
-       id=\"path~a\"
+       id=\"~a\"
        inkscape:connector-curvature=\"0\" />"
             (get-color fill-color) fill-opacity fill-rule opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity
-            d id)))
+            d (if (numberp id) (format nil "path~d" id) id))))
 
 (defmethod print-to-stream ((obj svg-point) stream)
   (with-slots
         (fill-color fill-opacity fill-rule stroke-color stroke-width stroke-linecap stroke-linejoin stroke-miterlimit stroke-dasharray
-                    opacity id cx cy rx)
+                    opacity id cx cy rx svg-class)
       obj
     (format stream
             "    <circle
        r=\"~a\"
        cy=\"~a\"
        cx=\"~a\"
+       class=\"~a\"
        style=\"opacity:1;fill:~a;fill-opacity:~a;fill-rule:~a;stroke:~a;stroke-width:~a;stroke-linecap:~a;stroke-linejoin:~a;stroke-miterlimit:~a;stroke-dasharray:~a;stroke-opacity:~a\"
-       id=\"path~a\"
+       id=\"~a\"
        />
 "
-             rx cy cx (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-miterlimit stroke-dasharray
-            opacity id)))
+             rx cy cx (or svg-class "undefined") (get-color fill-color) fill-opacity fill-rule (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-miterlimit stroke-dasharray
+             opacity (if (numberp id) (format nil "path~d" id) id))))
 
 (defmethod print-to-stream ((obj svg-clone) stream)
   (with-slots (href id transform) obj
@@ -396,11 +399,9 @@
 (defgeneric print-tail-to-stream (obj stream))
 
 (defmethod print-head-to-stream ((obj svg-file) stream)
-  (if *inverse*
-      (format stream (header obj) (sv obj 'width) (sv obj 'height)
-              (sv obj 'width) (sv obj 'height) "000000" "1.0" (if (sv obj 'showgrid) "true" "false"))
-      (format stream (header obj) (sv obj 'width) (sv obj 'height)
-              (sv obj 'width) (sv obj 'height) "FFFFFF" "0.0" (if (sv obj 'showgrid) "true" "false"))))
+  (let ((background-color (if (sv obj 'inverse) "#000000" "#FFFFFF")))
+    (format stream (header obj) background-color (sv obj 'width) (sv obj 'height)
+  (sv obj 'width) (sv obj 'height) background-color "0.0" (if (sv obj 'showgrid) "true" "false"))))
 
 (defmethod print-head-to-stream ((obj svg-layer) stream)
   (with-slots (name id insensitive visible) obj
@@ -433,7 +434,7 @@
              "  <g
      inkscape:label=\"~a\"
      inkscape:groupmode=\"layer\"
-     id=\"layer~a\"~a
+     id=\"layer-~a\"~a
      transform=\"translate(0, 150) scale(1, -1)\" >
 " name id (with-output-to-string (out)
             (if insensitive

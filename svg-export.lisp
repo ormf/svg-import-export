@@ -27,6 +27,28 @@
 (defun new-id (svg-file id-type)
   (incf (gethash id-type (slot-value svg-file 'id-hash) 0)))
 
+(defgeneric add-elements (container-obj &rest elems)
+  (:documentation "add elements supplied either as svg-objects or as list(s) of svg-objects"))
+
+(defmethod add-elements ((svg svg-file) &rest elems)
+  "add elements supplied either as svg-objects or as list(s) of svg-objects"
+  (dolist (elem (reverse elems))
+    (if (consp elem)
+        (dolist (element elem)
+          (push element (elements svg)))
+        (push elem (elements svg)))))
+
+(defmethod add-elements ((obj svg-group) &rest elems)
+  "add elements supplied either as svg-objects or as list(s) of svg-objects"
+  (list (cons obj
+              (let (result)
+                (dolist (elem (reverse elems))
+                  (if (consp elem)
+                      (dolist (element elem)
+                        (push element result))
+                      (push elem result)))
+                result))))
+
 (defun print-elements-to-stream (elems stream)
   (cond ((null elems) nil)
         ((consp (car elems))
@@ -39,12 +61,25 @@
            (print-to-stream (car elems) stream)
            (print-elements-to-stream (cdr elems) stream)))))
 
-(defun export-svg-file (svg-file &key (fname "/tmp/test.svg") (inverse nil) (showgrid t) (width 10000))
+(defun export-svg-file (svg-file &key (fname "/tmp/test.svg" fname-supplied-p) (inverse nil) (showgrid t) (width 10000))
   (setf (sv svg-file 'inverse) inverse)
   (setf (sv svg-file 'showgrid) showgrid)
   (setf (sv svg-file 'width) width)
-  (with-open-file (outstream fname :direction :output :if-exists :supersede)
+  (setf (sv svg-file 'fname) (if fname-supplied-p fname (or (sv svg-file 'fname) fname)))
+  (with-open-file (outstream (sv svg-file 'fname) :direction :output :if-exists :supersede)
     (print-head-to-stream svg-file outstream)
     (print-elements-to-stream (elements svg-file) outstream)
     (print-tail-to-stream svg-file outstream))
-  fname)
+  (sv svg-file 'fname))
+
+(defun export-svg (svg-file)
+  (with-slots (fname) svg-file
+    (with-open-file (outstream fname :direction :output :if-exists :supersede)
+      (print-head-to-stream svg-file outstream)
+      (print-elements-to-stream (elements svg-file) outstream)
+      (print-tail-to-stream svg-file outstream))
+    fname))
+
+(defmacro with-svg-file ((svg-file &rest keys) &body body)
+  `(let ((,svg-file (apply #'make-instance 'svg-file ',keys)))
+     ,@body))

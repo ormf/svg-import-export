@@ -8,7 +8,7 @@
 ;;; See http://www.cliki.net/LLGPL for the text of this agreement.
 ;;; **********************************************************************
 
-(in-package :svg-export-import)
+(in-package :svg-import-export)
 
 
 (defparameter *test* nil)
@@ -57,3 +57,30 @@
 ;;; export *test*
 
 (export-svg-file *test*)
+
+(with-svg-file (svg-file :fname "/tmp/test.svg" :showgrid nil)
+  (let ((end-time 100)
+        (xscale 10)
+        (gxoffs 20))
+    (setf (elements svg-file) 
+          (list
+           (append (list 
+                    (make-instance 'svg-layer 
+                                   :name "Ebene 1" 
+                                   :id (new-id svg-file 'layer-ids)))
+                   (loop for x from 0 to end-time by 12
+                         collect (make-instance 'svg-rect
+                                                :x (+ gxoffs (* xscale x)) 
+                                                :y 200
+                                                :width (* xscale 10)
+                                                :height 100
+                                                :fill-color "#333333"
+                                                :id (new-id svg-file 'rect-ids))))))
+    (push (svg-zeitachse end-time svg-file
+                         :gxoffs gxoffs :gyoffs 100 :xscale xscale)
+          (elements svg-file))
+    (push (svg-piano-roll svg-file)
+          (elements svg-file))
+    (push (svg-staff-system svg-file)
+          (elements svg-file))
+    (export-svg svg-file)))
