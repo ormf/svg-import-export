@@ -167,6 +167,17 @@ transformations are executed from left to right."
   (and (typep node 'cxml-stp:element)
        (equal (cxml-stp:local-name node) "g")))
 
+(defun layer? (node &key (URI "http://www.inkscape.org/namespaces/inkscape"))
+     (and (typep node 'cxml-stp:element)
+	  (equal (cxml-stp:local-name node) "g")
+          (if (cxml-stp:find-attribute-named node "groupmode" URI)
+              (equal (cxml-stp:value (cxml-stp:find-attribute-named node "groupmode" URI)) "layer"))
+          (cxml-stp:find-attribute-named node "label" URI)))
+
+(defun layer-name (node &key (URI "http://www.inkscape.org/namespaces/inkscape"))
+  (cxml-stp:value (cxml-stp:find-attribute-named node "label" URI)))
+
+
 #|
 (defun visible? (node &key (URI "http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"))
   (if (and (cxml-stp:find-attribute-named node "label" URI)
@@ -450,6 +461,15 @@ is exhausted."
 (defun quote-svg-attr-props (str)
   (reduce #'quote-svg-attr-prop *svg-attr-props-to-quote* :initial-value str))
 
+(defclass svg-cm-line ()
+  ((x1 :accessor svg-cm-line-x1 :initarg :x1)
+   (y1 :accessor svg-cm-line-y1 :initarg :y1)
+   (x2 :accessor svg-cm-line-x2 :initarg :x2)
+   (y2 :accessor svg-cm-line-y2 :initarg :y2)
+   (color :accessor svg-cm-line-color :initarg :color)
+   (opacity :accessor svg-cm-line-opacity :initarg :opacity)
+   (attributes :accessor svg-cm-line-attributes :initarg :attributes)))
+
 (defun get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize t) (yquantize t))
   "return (list x y length color opacity) from path."
   (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
@@ -463,29 +483,30 @@ is exhausted."
              (list (funcall #'vec-mtx-mult (first path) transformation)
                    (funcall #'vec-mtx-mult (second path) transformation))
              #'< :key #'first)
-          (list :x1
-                (if xquantize
-                    (* (round (* 2 timescale (+ x-offset x1))) 0.5)
-                    (+ x-offset (* timescale x1)))
-                :y1
-                (if yquantize
-                    (round (* 1 y1))
-                    (* 1 y1))
-                :x2
-                (if xquantize
-                    (round (* timescale x2))
-                    (+ x-offset (* timescale x2)))
-                :y2
-                (if yquantize
-                    (round (* 1 y2))
-                    (* 1 y2))
-                :color
-                (style-stroke-color style-string)
-                :opacity
-                (* (svg-parse-state-opacity parse-state)
-                   (style-opacity style-string))
-                :attributes (if attributes (read-from-string (format nil "(~a)" (quote-svg-attr-props attributes))))
-                ))
+          (make-instance 'svg-cm-line
+           :x1
+           (if xquantize
+               (* (round (* 2 timescale (+ x-offset x1))) 0.5)
+               (+ x-offset (* timescale x1)))
+           :y1
+           (if yquantize
+               (round (* 1 y1))
+               (* 1 y1))
+           :x2
+           (if xquantize
+               (round (* timescale x2))
+               (+ x-offset (* timescale x2)))
+           :y2
+           (if yquantize
+               (round (* 1 y2))
+               (* 1 y2))
+           :color
+           (style-stroke-color style-string)
+           :opacity
+           (* (svg-parse-state-opacity parse-state)
+              (style-opacity style-string))
+           :attributes (if attributes (read-from-string (format nil "(~a)" (quote-svg-attr-props attributes))))
+           ))
         (warn "~a is empty!" (cxml-stp:value (cxml-stp:find-attribute-named node "id"))))))
 
 
@@ -570,7 +591,7 @@ is exhausted."
      layer)
     (reverse result)))
 
-(defun collect-lines (layer parse-state &key (timescale 1) (x-offset 0) (xquantize t) (yquantize t))
+(defun collect-lines (layer parse-state &key (timescale 1) (x-offset 0) (xquantize t) (yquantize t) layer?)
   (let ((result '()))
     (if (and layer (visible? layer))
         (progn
@@ -578,20 +599,31 @@ is exhausted."
            'list
            (lambda (child)
              (cond
+               ((and layer? (layer? child) (visible? child))
+                (let ((inner-parse-state (update-state (copy-svg-parse-state parse-state) child)))
+                  (let ((name (layer-name child))
+                        (res (collect-lines child inner-parse-state
+                                            :x-offset x-offset
+                                            :timescale timescale
+                                            :xquantize xquantize
+                                            :yquantize yquantize
+                                            :layer? layer?)))
+                    (if res (setf result (append (list res :contents name :layer) result))))))
                ((and (group? child) (visible? child))
                 (let ((inner-parse-state (update-state (copy-svg-parse-state parse-state) child)))
                   (let ((res (collect-lines child inner-parse-state
                                             :x-offset x-offset
                                             :timescale timescale
                                             :xquantize xquantize
-                                            :yquantize yquantize)))
-                    (if res (push res result)))))
+                                            :yquantize yquantize
+                                            :layer? layer?)))
+                    (push res result))))
                ((path? child) (ou:push-if (get-path-coords child parse-state
-                                                        :xquantize xquantize
-                                                        :yquantize yquantize
-                                                        :x-offset x-offset
-                                                        :timescale timescale)
-                                       result))))
+                                                           :xquantize xquantize
+                                                           :yquantize yquantize
+                                                           :x-offset x-offset
+                                                           :timescale timescale)
+                                          result))))
            layer)
           (reverse result)))))
 
@@ -621,7 +653,7 @@ is exhausted."
   (transformation nil)
   (opacity 1.0))
 
-(defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize t) (yquantize t) (layer-name "Punkte"))
+(defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize t) (yquantize t) (layer-name "Punkte") layer?)
   "extract all line objects) in the layer \"Punkte\" of svg infile."
   (collect-lines
    (get-layer
@@ -631,7 +663,8 @@ is exhausted."
      (stp:make-builder)))
    (make-svg-parse-state)
    :xquantize xquantize :yquantize yquantize
-   :x-offset x-offset :timescale timescale))
+   :x-offset x-offset :timescale timescale
+   :layer? layer?))
 
 #|
 
