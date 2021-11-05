@@ -470,7 +470,7 @@ is exhausted."
    (opacity :accessor svg-cm-line-opacity :initarg :opacity)
    (attributes :accessor svg-cm-line-attributes :initarg :attributes)))
 
-(defun get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize t) (yquantize t))
+(defun get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize nil) (yquantize nil))
   "return (list x y length color opacity) from path."
   (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
          (style-string (cxml-stp:value (cxml-stp:find-attribute-named node "style")))
@@ -494,8 +494,8 @@ is exhausted."
                (* 1 y1))
            :x2
            (if xquantize
-               (round (* timescale x2))
-               (+ x-offset (* timescale x2)))
+                  (round (* timescale x2))
+                  (+ x-offset (* timescale x2)))
            :y2
            (if yquantize
                (round (* 1 y2))
@@ -505,11 +505,10 @@ is exhausted."
            :opacity
            (* (svg-parse-state-opacity parse-state)
               (style-opacity style-string))
-           :attributes (if attributes (read-from-string (format nil "(~a)" (quote-svg-attr-props attributes))))
+           :attributes (if (and attributes (string/= (string-upcase attributes) "NONE"))
+                           (read-from-string (format nil "(~a)" (quote-svg-attr-props attributes))))
            ))
         (warn "~a is empty!" (cxml-stp:value (cxml-stp:find-attribute-named node "id"))))))
-
-
 
 (defun update-transformation (curr-transformation node)
   (let ((new-transform (cxml-stp:find-attribute-named node "transform")))
@@ -561,10 +560,11 @@ is exhausted."
 
 (defun get-fill-color (node)
   (aref
-   (second (multiple-value-list
-            (cl-ppcre:scan-to-strings
-             "fill:(#[0-9a-fA-F]+)"
-             (cxml-stp:value (cxml-stp:find-attribute-named node "style")))))
+   (or (second (multiple-value-list
+                (cl-ppcre:scan-to-strings
+                 "fill:(#[0-9a-fA-F]+)"
+                 (cxml-stp:value (cxml-stp:find-attribute-named node "style")))))
+       #("#000000"))
    0))
 
 
@@ -591,7 +591,7 @@ is exhausted."
      layer)
     (reverse result)))
 
-(defun collect-lines (layer parse-state &key (timescale 1) (x-offset 0) (xquantize t) (yquantize t) layer?)
+(defun collect-lines (layer parse-state &key (timescale 1) (x-offset 0) (xquantize nil) (yquantize nil) layer?)
   (let ((result '()))
     (if (and layer (visible? layer))
         (progn
@@ -608,7 +608,7 @@ is exhausted."
                                             :xquantize xquantize
                                             :yquantize yquantize
                                             :layer? layer?)))
-                    (if res (setf result (append (list res :contents name :layer) result))))))
+                    (if res (setf result (append (list (list :layer name :contents res)) result))))))
                ((and (group? child) (visible? child))
                 (let ((inner-parse-state (update-state (copy-svg-parse-state parse-state) child)))
                   (let ((res (collect-lines child inner-parse-state
@@ -617,7 +617,7 @@ is exhausted."
                                             :xquantize xquantize
                                             :yquantize yquantize
                                             :layer? layer?)))
-                    (push res result))))
+                    (if res (push res result)))))
                ((path? child) (ou:push-if (get-path-coords child parse-state
                                                            :xquantize xquantize
                                                            :yquantize yquantize
@@ -653,8 +653,8 @@ is exhausted."
   (transformation nil)
   (opacity 1.0))
 
-(defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize t) (yquantize t) (layer-name "Punkte") layer?)
-  "extract all line objects) in the layer \"Punkte\" of svg infile."
+(defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize nil) (yquantize nil) (layer-name "Events") layer?)
+  "extract all line objects in the layer \"Punkte\" of svg infile."
   (collect-lines
    (get-layer
     layer-name

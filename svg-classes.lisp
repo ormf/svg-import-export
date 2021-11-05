@@ -110,7 +110,8 @@
        spacingy=\"1\"
        spacingx=\"1\"
        dotted=\"false\" 
-       empspacing=\"4\" />
+       empspacing=\"4\"
+       enabled=\"~a\" />
     <inkscape:grid
        type=\"xygrid\"
        id=\"grid-5x5\"
@@ -118,7 +119,7 @@
        spacingx=\"1\"
        dotted=\"false\" 
        empspacing=\"5\"
-       enabled=\"false\" />
+       enabled=\"~a\" />
   </sodipodi:namedview>
   <metadata
      id=\"metadata2397\">
@@ -140,6 +141,7 @@
    (height  :accessor height :initarg :height :initform 216 :export t)
    (inverse :accessor inverse :initarg :inverse :initform nil :export t)
    (showgrid :accessor showgrid :initarg :showgrid :initform t :export t)
+   (gridtype :accessor gridtype :initarg :showgrid :initform "4x4" :export t)
    (elements :accessor elements :initarg :elements :initform nil :export t)
    (last-id :accessor last-id :initarg :last-id :initform 1000 :export t)
    (id-hash :accessor id-hash :initarg :id-hash :initform (make-hash-table) :export t)))
@@ -401,7 +403,9 @@
 (defmethod print-head-to-stream ((obj svg-file) stream)
   (let ((background-color (if (sv obj 'inverse) "#000000" "#FFFFFF")))
     (format stream (header obj) background-color (sv obj 'width) (sv obj 'height)
-  (sv obj 'width) (sv obj 'height) background-color "0.0" (if (sv obj 'showgrid) "true" "false"))))
+            (sv obj 'width) (sv obj 'height) background-color "0.0" (if (sv obj 'showgrid) "true" "false")
+            (if (string= (sv obj 'gridtype) "4x4") "true" "false")
+            (if (string= (sv obj 'gridtype) "5x5") "true" "false"))))
 
 (defmethod print-head-to-stream ((obj svg-layer) stream)
   (with-slots (name id insensitive visible) obj
