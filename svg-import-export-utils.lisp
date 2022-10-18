@@ -221,31 +221,45 @@
                                                        :id (new-id svg-file 'line-ids)))))))
      (elements svg-file))))
 
-(defun svg-barlines (svg-file &key (visible t) (width 10000) (x-scale 8) (barstepsize 4) (startbar 1) (barmultiplier 1))
-  (append (list (make-instance 'svg-layer :name "Barlines" :id (new-id svg-file 'layer-ids) :insensitive t
-                               :visible visible))
-          (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
-                      (append
-                       (loop for time from 0 to width by (* x-scale barstepsize)
-                          collect (make-instance 'svg-line
-                                                 :x1 (float time)
-                                                 :y1 29.5
-                                                 :x2 (float time)
-                                                 :y2 138.50
-                                                 :stroke-color "#000000"
-                                                 :stroke-width 0.25
-                                                 :id (new-id svg-file 'line-ids))))))
-          (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
-                      (append
-                       (loop for time from 0 to width by (* x-scale barstepsize)
-                          for barnum from startbar by barmultiplier
-                          collect (make-instance 'svg-text
-                                                 :label (format nil "~d" barnum)
-                                                 :x (float time)
-                                                 :y 29
-                                                 :fill-color +black+
-                                                 :font-size 6
-                                                 :id (new-id svg-file 'text-ids))))))))
+(defun svg-barlines (svg-file &key (visible t) (width 10000) (x-scale 8) (barstepsize 4) (startbar 1) (barmultiplier 1) timesigs)
+  (let ((times (if timesigs
+                   (loop
+                     for time = 0 then (incf time
+                                             (* x-scale barwidth))
+                     for barwidth in timesigs
+                     while (< time width)
+                     collect time)
+                   (loop
+                     for time = 0
+                       then (incf time (* x-scale barstepsize))
+                     while (< time width)
+                     collect time))))
+    (append (list (make-instance 'svg-layer :name "Barlines" :id (new-id svg-file 'layer-ids) :insensitive t
+                                            :visible visible))
+            (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
+                        (append
+                         (loop
+                           for idx from 0
+                           for time in times
+                           collect (make-instance 'svg-line
+                                                  :x1 (float time)
+                                                  :y1 29.5
+                                                  :x2 (float time)
+                                                  :y2 138.50
+                                                  :stroke-color "#000000"
+                                                  :stroke-width 0.25
+                                                  :id (new-id svg-file 'line-ids))))))
+            (list (cons (make-instance 'svg-group :id (new-id svg-file 'group-ids))
+                        (append
+                         (loop for time in times
+                               for barnum from startbar by barmultiplier
+                               collect (make-instance 'svg-text
+                                                      :label (format nil "~d" barnum)
+                                                      :x (float time)
+                                                      :y 29
+                                                      :fill-color +black+
+                                                      :font-size 6
+                                                      :id (new-id svg-file 'text-ids)))))))))
 
 
 ;;; transform simple lists containing x,y and optional color or opacity

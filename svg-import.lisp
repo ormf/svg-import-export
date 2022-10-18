@@ -443,7 +443,8 @@ is exhausted."
 (defparameter *svg-attr-props-to-quote* nil)
 
 (defun add-svg-attr-props-to-quote (&rest props)
-  (mapcar (lambda (prop) (pushnew prop *svg-attr-props-to-quote*)) props))
+  (mapc (lambda (prop) (pushnew prop *svg-attr-props-to-quote*)) props)
+  *svg-attr-props-to-quote*)
 
 (defun quote-svg-attr-prop (attr-str prop)
   (multiple-value-bind (str reg)
