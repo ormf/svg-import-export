@@ -61,11 +61,11 @@
            (print-to-stream (car elems) stream)
            (print-elements-to-stream (cdr elems) stream)))))
 
-(defun export-svg-file (svg-file &key (fname "/tmp/test.svg" fname-supplied-p) (inverse nil) (showgrid t) (gridtype "4x4") (width 10000))
+(defun export-svg-file (svg-file &key (fname "/tmp/test.svg" fname-supplied-p) (inverse nil) (showgrid t) (gridtype "4x4") width)
   (setf (sv svg-file 'inverse) inverse)
   (setf (sv svg-file 'showgrid) showgrid)
   (setf (sv svg-file 'gridtype) gridtype)
-  (setf (sv svg-file 'width) width)
+  (setf (sv svg-file 'width) (or width (sv svg-file 'width) 10000))
   (setf (sv svg-file 'fname) (if fname-supplied-p fname (or (sv svg-file 'fname) fname)))
   (with-open-file (outstream (sv svg-file 'fname) :direction :output :if-exists :supersede)
     (print-head-to-stream svg-file outstream)
