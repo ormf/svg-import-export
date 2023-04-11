@@ -59,6 +59,7 @@
    #:SVG-PIANO-ROLL
    #:SVG-STAFF-SYSTEM
    #:SVG-BARLINES
+   #:MAKE-CM-LINE
    ;; #:POINTS->PD-TEXT
    ;; #:POINTS->MIDI
    ;; #:SVG->BC-LIST

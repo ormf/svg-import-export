@@ -471,6 +471,10 @@ is exhausted."
    (opacity :accessor svg-cm-line-opacity :initarg :opacity)
    (attributes :accessor svg-cm-line-attributes :initarg :attributes)))
 
+(defun make-cm-line (args)
+  "wrapper function for mapping."
+  (apply #'make-instance 'svg-ie:svg-cm-line args))
+
 (defun get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize nil) (yquantize nil))
   "return (list x y length color opacity) from path."
   (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
