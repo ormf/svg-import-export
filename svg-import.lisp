@@ -579,7 +579,7 @@ is exhausted."
   (opacity 1.0))
 
 (defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize nil) (yquantize nil) (layer-name "Events") layer?)
-  "extract all line objects in the layer \"Punkte\" of svg infile."
+  "extract all line objects in the layer <layer-name> of svg infile."
   (collect-lines
    (get-layer
     layer-name

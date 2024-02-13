@@ -73,4 +73,5 @@
    #:STROKE-MITERLIMIT1
    #:SHOWGRID
    #:FNAME
-))
+   #:CX #:CY #:ZOOM #:W-WIDTH #:W-HEIGHT #:W-X #:W-Y
+   ))

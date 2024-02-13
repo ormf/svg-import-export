@@ -763,13 +763,14 @@ lists containing all svg attributes."
     hash))
 
 (defun pd-color->svg-color (pd-color)
-  (color-lookup (color-lookup pd-color *pd-colors*) *svg-colors*))
+  (or (color-lookup (color-lookup pd-color *pd-colors*) *svg-colors*)
+      "#000000"))
 
 (defun svg-color->pd-color (svg-color)
   (or (color-lookup (color-lookup svg-color *svg-colors*) *pd-colors-reverse*)
       (mod (sxhash svg-color) 111)))
 
-;;; (pd-color->svg-color 77) -> "#87CFFF"
+;;; (pd-color->svg-color 2) -> "#87CFFF"
 
 ;;; (svg-color->pd-color "#87CFFF") -> 77
 

@@ -16,13 +16,6 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 <svg
    style=\"background-color:~a\"
-   xmlns:dc=\"http://purl.org/dc/elements/1.1/\"
-   xmlns:cc=\"http://creativecommons.org/ns#\"
-   xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"
-   xmlns:svg=\"http://www.w3.org/2000/svg\"
-   xmlns=\"http://www.w3.org/2000/svg\"
-   xmlns:sodipodi=\"http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd\"
-   xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\"
    width=\"~dpx\"
    height=\"~dpx\"
    viewBox=\"0 0 ~d ~d\"
@@ -32,7 +25,14 @@
    inkscape:version=\"0.92+devel 15617 custom\"
    sodipodi:docname=\"test.svg\"
    inkscape:output_extension=\"org.inkscape.output.svg.inkscape\"
-   version=\"1.1\">
+   version=\"1.1\"
+   xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\"
+   xmlns:sodipodi=\"http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd\"
+   xmlns=\"http://www.w3.org/2000/svg\"
+   xmlns:svg=\"http://www.w3.org/2000/svg\"
+   xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"
+   xmlns:cc=\"http://creativecommons.org/ns#\"
+   xmlns:dc=\"http://purl.org/dc/elements/1.1/\">
 
   <defs
      id=\"defs2394\">
@@ -92,18 +92,18 @@
      borderopacity=\"1.0\"
      inkscape:pageopacity=\"~3,1f\"
      inkscape:pageshadow=\"2\"
-     inkscape:zoom=\"1.4\"
-     inkscape:cx=\"356.52313\"
-     inkscape:cy=\"365.77098\"
+     inkscape:zoom=\"~a\"
+     inkscape:cx=\"~a\"
+     inkscape:cy=\"~a\"
      inkscape:document-units=\"px\"
      inkscape:current-layer=\"layer1\"
-     inkscape:window-width=\"1920\"
-     inkscape:window-height=\"1041\"
-     inkscape:window-x=\"1366\"
-     inkscape:window-y=\"0\"
+     inkscape:window-width=\"~a\"
+     inkscape:window-height=\"~a\"
+     inkscape:window-x=\"~a\"
+     inkscape:window-y=\"~a\"
      showgrid=\"~a\"
      gridtolerance=\"10000\"
-     inkscape:window-maximized=\"1\">
+     inkscape:window-maximized=\"0\">
     <inkscape:grid
        type=\"xygrid\"
        id=\"default-grid-4x4\"
@@ -134,6 +134,12 @@
   </metadata>
 ")
 
+#|
+
+(make-class-args '(zoom cx cy w-width w-height w-x w-y))
+
+|#
+
 (def-exporting-class svg-file ()
   ((fname :accessor fname :initarg :fname :initform "/tmp/test.svg" :export t)
    (header :accessor header :initarg :header :initform *svg-header* :export t)
@@ -141,6 +147,13 @@
    (height  :accessor height :initarg :height :initform 216 :export t)
    (inverse :accessor inverse :initarg :inverse :initform nil :export t)
    (showgrid :accessor showgrid :initarg :showgrid :initform t :export t)
+   (zoom :accessor zoom :initarg :zoom :initform 1.4 :export t)
+   (cx :accessor cx :initarg :cx :initform 350 :export t)
+   (cy :accessor cy :initarg :cy :initform 360 :export t)
+   (w-width :accessor w-width :initarg :w-width :initform 1920 :export t)
+   (w-height :accessor w-height :initarg :w-height :initform 1080 :export t)
+   (w-x :accessor w-x :initarg :w-x :initform 0 :export t)
+   (w-y :accessor w-y :initarg :w-y :initform 0 :export t)
    (gridtype :accessor gridtype :initarg :showgrid :initform "4x4" :export t)
    (elements :accessor elements :initarg :elements :initform nil :export t)
    (last-id :accessor last-id :initarg :last-id :initform 1000 :export t)
@@ -216,6 +229,7 @@
   ((label :accessor label :initarg :label :initform "" :export t)
    (y :accessor y :initarg :y :initform 0 :export t)
    (x :accessor x :initarg :x :initform 0 :export t)
+   (attributes :accessor attributes :initarg :attributes :initform nil :export t)
    (text-anchor :accessor text-anchor :initarg :text-anchor :initform "start" :export t)
    (font-size :accessor font-size :initarg :font-size :initform 12 :export t)
    (font-style :accessor font-style :initarg :font-style :initform "normal" :export t)
@@ -260,7 +274,7 @@
 (defun make-class-args (liste)
   (format t "~%")
   (loop for arg in liste
-     do (format t "(~a :accessor ~a :initarg :~a :initform \"\")~%" arg arg arg)))
+     do (format t "~&(~a :accessor ~a :initarg :~a :initform  :export t)~%" arg arg arg)))
 
 
 ;; (make-class-args '("id" "y" "x" "font-size" "font-style" "font-weight" "fill" "fill-opacity" ))
@@ -289,13 +303,14 @@
 
 (defgeneric print-to-stream (obj stream))
 (defmethod print-to-stream ((obj svg-text) stream)
-  (with-slots (id y x font-size text-anchor font-style font-weight fill-color fill-opacity stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity opacity font-family label) obj
+  (with-slots (id y x font-size text-anchor font-style font-weight fill-color fill-opacity stroke-color stroke-width stroke-linecap stroke-linejoin stroke-opacity opacity font-family label attributes) obj
     (format stream
             "<text
          id=\"text~a\"
          y=\"~a\"
          x=\"~a\"
-         style=\"font-size:~apx;font-style:~a;font-weight:~a;opacity:~a;fill:~a;fill-opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;font-family:~a\"
+         style=\"font-size:~apx;font-style:~a;font-weight:~a;opacity:~a;fill:~a;fill-opacity:~a;stroke:~a;stroke-width:~apx;stroke-linecap:~a;stroke-linejoin:~a;stroke-opacity:~a;font-family:~a\"~@[
+         attributes= \"~a\"~]
          xml:space=\"preserve\"
          text-anchor=\"~a\"><tspan
            y=\"~a\"
@@ -303,7 +318,7 @@
            font-size=\"~apx\"
            id=\"tspan~a\"
            sodipodi:role=\"line\">~a</tspan></text>"
-            id y x font-size font-style font-weight opacity (get-color fill-color) fill-opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity font-family text-anchor y x font-size id label)))
+            id y x font-size font-style font-weight opacity (get-color fill-color) fill-opacity (get-color stroke-color) stroke-width stroke-linecap stroke-linejoin stroke-opacity font-family attributes text-anchor y x font-size id label)))
 
 ;; (print-to-stream (make-instance 'svg-text :label "Testtext" :x 100 :y 117) t)
 
@@ -403,7 +418,15 @@
 (defmethod print-head-to-stream ((obj svg-file) stream)
   (let ((background-color (if (sv obj 'inverse) "#000000" "#FFFFFF")))
     (format stream (header obj) background-color (sv obj 'width) (sv obj 'height)
-            (sv obj 'width) (sv obj 'height) background-color "0.0" (if (sv obj 'showgrid) "true" "false")
+            (sv obj 'width) (sv obj 'height) background-color "0.0"
+            (sv obj 'zoom)
+            (sv obj 'cx)
+            (sv obj 'cy)
+            (sv obj 'w-width)
+            (sv obj 'w-height)
+            (sv obj 'w-x)
+            (sv obj 'w-y)
+            (if (sv obj 'showgrid) "true" "false")
             (if (string= (sv obj 'gridtype) "4x4") "true" "false")
             (if (string= (sv obj 'gridtype) "5x5") "true" "false"))))
 
