@@ -404,6 +404,7 @@ is exhausted."
 (subseq "1 2 3" 3 nil)
 
 (parse-path2 "M 10,40 5,8")
+|#
 
 (defun get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize t) (yquantize t))
   "return (list x y length color opacity) from path."
@@ -432,7 +433,6 @@ is exhausted."
               (style-opacity style-string))))
         (warn "~a is empty!" (cxml-stp:value (cxml-stp:find-attribute-named node "id"))))))
 
-|#
 
 
 (defun update-transformation (curr-transformation node)
@@ -516,7 +516,48 @@ is exhausted."
      layer)
     (reverse result)))
 
-(defun collect-lines (layer parse-state &key (timescale 1) (x-offset 0) (xquantize nil) (yquantize nil) layer?)
+(defun svg-ie-get-path-coords (node parse-state &key (x-offset 0) (timescale 1) (xquantize nil) (yquantize nil))
+  "return a list from path node."
+  (let* ((path (parse-path2 (cxml-stp:value (cxml-stp:find-attribute-named node "d"))))
+         (style-string (cxml-stp:value (cxml-stp:find-attribute-named node "style")))
+         (attributes (and (cxml-stp:find-attribute-named node "attributes")
+                          (cxml-stp:value (cxml-stp:find-attribute-named node "attributes"))))
+         (transformation (update-transformation (svg-parse-state-transformation parse-state) node)))
+    (if path
+        (destructuring-bind ((x1 y1) (x2 y2))
+            (sort
+             (list (funcall #'vec-mtx-mult (first path) transformation)
+                   (funcall #'vec-mtx-mult (second path) transformation))
+             #'< :key #'first)
+          (list
+           :x1
+           (if xquantize
+               (* (round (* 2 timescale (+ x-offset x1))) 0.5)
+               (+ x-offset (* timescale x1)))
+           :y1
+           (if yquantize
+               (round (* 1 y1))
+               (* 1 y1))
+           :x2
+           (if xquantize
+                  (round (* timescale x2))
+                  (+ x-offset (* timescale x2)))
+           :y2
+           (if yquantize
+               (round (* 1 y2))
+               (* 1 y2))
+           :color
+           (style-stroke-color style-string)
+           :opacity
+           (* (svg-parse-state-opacity parse-state)
+              (style-opacity style-string))
+           :attributes (if (and attributes (string/= (string-upcase attributes) "NONE"))
+                           (read-from-string (format nil "(~a)" (quote-svg-attr-props attributes))))
+           ))
+        (warn "~a is empty!" (cxml-stp:value (cxml-stp:find-attribute-named node "id"))))))
+
+(defun svg-collect-lines (layer parse-state &key (timescale 1) (x-offset 0) (xquantize nil) (yquantize nil) layer?)
+  "return a property list of all lines in layer with a given parse-state."
   (let ((result '()))
     (if (and layer (visible? layer))
         (progn
@@ -527,7 +568,7 @@ is exhausted."
                ((and layer? (layer? child) (visible? child))
                 (let ((inner-parse-state (update-state (copy-svg-parse-state parse-state) child)))
                   (let ((name (layer-name child))
-                        (res (collect-lines child inner-parse-state
+                        (res (svg-collect-lines child inner-parse-state
                                             :x-offset x-offset
                                             :timescale timescale
                                             :xquantize xquantize
@@ -536,23 +577,21 @@ is exhausted."
                     (if res (setf result (append (list (list :layer name :contents res)) result))))))
                ((and (group? child) (visible? child))
                 (let ((inner-parse-state (update-state (copy-svg-parse-state parse-state) child)))
-                  (let ((res (collect-lines child inner-parse-state
+                  (let ((res (svg-collect-lines child inner-parse-state
                                             :x-offset x-offset
                                             :timescale timescale
                                             :xquantize xquantize
                                             :yquantize yquantize
                                             :layer? layer?)))
                     (if res (push res result)))))
-               ((path? child) (ou:push-if (get-path-coords child parse-state
-                                                           :xquantize xquantize
-                                                           :yquantize yquantize
-                                                           :x-offset x-offset
-                                                           :timescale timescale)
+               ((path? child) (ou:push-if (svg-ie-get-path-coords child parse-state
+                                                                  :xquantize xquantize
+                                                                  :yquantize yquantize
+                                                                  :x-offset x-offset
+                                                                  :timescale timescale)
                                           result))))
            layer)
           (reverse result)))))
-
-;;; (collect-points (get-layer "Punkte" *xml*))
 
 (defun find-element (local-name xml)
   (cxml-stp:find-recursively-if
@@ -578,9 +617,9 @@ is exhausted."
   (transformation nil)
   (opacity 1.0))
 
-(defun get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize nil) (yquantize nil) (layer-name "Events") layer?)
-  "extract all line objects in the layer <layer-name> of svg infile."
-  (collect-lines
+(defun svg-get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize nil) (yquantize nil) (layer-name "Events") layer?)
+  "extract all lines in the layer <layer-name> of svg infile."
+  (svg-collect-lines
    (get-layer
     layer-name
     (cxml:parse-file

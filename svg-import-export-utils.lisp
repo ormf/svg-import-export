@@ -345,8 +345,8 @@ supposed to be a midifloat value, x ist translated into secs/beats."
   "extract all line objects in the layer \"Events\" of svg infile.
 Also removes duplicates and flattens subgroups. Lines are property
 lists containing all svg attributes."
-  (let ((seq (get-lines-from-file :fname infile :timescale timescale :xquantize xquantize :yquantize yquantize
-                                  :layer-name layer :layer? layer?)))
+  (let ((seq (svg-get-lines-from-file :fname infile :timescale timescale :xquantize xquantize :yquantize yquantize
+                                      :layer-name layer :layer? layer?)))
     (if group? seq
         (ou:flatten seq))))
 
