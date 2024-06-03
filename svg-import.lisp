@@ -617,13 +617,20 @@ is exhausted."
   (transformation nil)
   (opacity 1.0))
 
+(defun sanitize-filename (fname)
+  (let ((filename (namestring fname)))
+    (if (char= (aref filename 0) #\~)
+        (merge-pathnames (string-left-trim '(#\/) (subseq filename 1))
+                         (user-homedir-pathname))
+        (pathname fname))))
+
 (defun svg-get-lines-from-file (&key (fname #P"/tmp/test.svg") (x-offset 0) (timescale 1) (xquantize nil) (yquantize nil) (layer-name "Events") layer?)
   "extract all lines in the layer <layer-name> of svg infile."
   (svg-collect-lines
    (get-layer
     layer-name
     (cxml:parse-file
-     fname
+     (sanitize-filename fname)
      (stp:make-builder)))
    (make-svg-parse-state)
    :xquantize xquantize :yquantize yquantize
